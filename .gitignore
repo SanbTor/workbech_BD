@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+saida/
+config/conexoes.json
+config/conexoes.json.tmp
+config/.chave-local
+config/workbench.json

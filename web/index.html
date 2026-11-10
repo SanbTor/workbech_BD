@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL Workbench</title>
+<style>
+/* ====== tema herdado do Anonimizador (cores, tipografia, raio, botões, inputs) ====== */
+:root{
+  --fundo:#F6F7F9; --sup:#FFFFFF; --tinta:#18212D; --suave:#5A6575; --fraco:#8A94A3;
+  --linha:#E2E6EC; --linha2:#EEF1F5;
+  --azul:#1F4FD1; --azul-esc:#183FA8; --azul-claro:#EAF0FD; --azul-med:#C9D7F8;
+  --ok:#137A4B; --ok-claro:#E7F5EE; --alerta:#9A5B00; --alerta-claro:#FFF5E1; --erro:#B42318; --erro-claro:#FDECEA;
+  --t-tabela:#1F4FD1; --t-view:#0E7F72; --t-db:#7046D9;
+  --raio:8px; --mono:Consolas,"Cascadia Mono",Menlo,monospace;
+  font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  color:var(--tinta); font-size:14px; line-height:1.5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);font-variant-numeric:tabular-nums}
+h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-size:16px;font-weight:600;margin:0}
+h3{font-size:14px;font-weight:600;margin:0}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+.oculto{display:none!important}
+.suave{color:var(--suave)} .fraco{color:var(--fraco)}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+
+/* botões */
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--linha);background:var(--sup);
+  padding:7px 13px;border-radius:var(--raio);cursor:pointer;font-weight:500;white-space:nowrap}
+a.btn{text-decoration:none;color:inherit}
+.btn:hover{border-color:#C8CFD9;background:#FAFBFC}
+.btn.prim,a.btn.prim{background:var(--azul);border-color:var(--azul);color:#fff}
+.btn.prim:hover{background:var(--azul-esc)}
+.btn.link{border:0;background:none;color:var(--azul);padding:4px 6px}
+.btn.link:hover{text-decoration:underline}
+.btn.perigo{color:var(--erro)}
+.btn.peq{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn svg{flex:none}
+input[type=text],input[type=password],input[type=number],input[type=search],input[type=date],select{
+  border:1px solid var(--linha);background:var(--sup);border-radius:6px;padding:7px 10px;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--azul);outline:none;box-shadow:0 0 0 3px var(--azul-claro)}
+.erro-msg{color:var(--erro);font-size:13px}
+
+/* blocos, alertas, progresso (iguais ao Anonimizador) */
+.bloco{border:1px solid var(--linha);border-radius:10px;background:var(--sup);padding:16px 18px}
+.alertas{display:grid;gap:4px;margin:6px 0 10px}
+.alerta{font-size:13px;background:var(--alerta-claro);color:var(--alerta);padding:6px 10px;border-radius:6px}
+.info{font-size:13px;background:var(--azul-claro);color:var(--azul-esc);padding:6px 10px;border-radius:6px}
+.erro-caixa{background:var(--erro-claro);color:var(--erro);padding:10px 14px;border-radius:8px;font-size:13.5px}
+.erro-caixa details{margin-top:6px;color:var(--tinta)}
+.erro-caixa summary{cursor:pointer;color:var(--erro);font-size:12.5px}
+.erro-caixa code{display:block;white-space:pre-wrap;word-break:break-word;margin-top:4px;color:var(--suave)}
+.bloqueado{background:#F3F0FF;color:#4B2BB0}
+.progresso{border:1px solid var(--linha);border-radius:10px;background:var(--sup);padding:16px 18px}
+.barra{height:6px;border-radius:3px;background:var(--linha2);overflow:hidden;margin:12px 0 8px}
+.barra i{display:block;height:100%;background:var(--azul);width:0;transition:width .3s}
+.barra.indet i{width:35%;animation:indet 1.2s ease-in-out infinite}
+@keyframes indet{0%{margin-left:-35%}100%{margin-left:100%}}
+.gira{width:14px;height:14px;border:2px solid var(--azul-med);border-top-color:var(--azul);border-radius:50%;display:inline-block;animation:gira .7s linear infinite;vertical-align:-2px;flex:none}
+@keyframes gira{to{transform:rotate(360deg)}}
+.acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pilula{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;background:var(--sup);border:1px solid var(--linha);font-size:12.5px;color:var(--suave);white-space:nowrap}
+.pilula b{font-weight:600;color:var(--tinta)}
+.selo{font-size:11px;font-weight:600;letter-spacing:.03em;border-radius:4px;padding:0 6px;border:1px solid currentColor;line-height:17px;display:inline-block}
+.selo.tabela{color:var(--t-tabela)} .selo.view{color:var(--t-view)} .selo.mysql{color:#0E7490} .selo.oracle{color:#B42318}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:50;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.15)}
+.toast.ok{background:var(--ok)} .toast.erro{background:var(--erro)}
+
+/* seletor segmentado (igual ao tipo de banco do Anonimizador) */
+.seg{display:inline-flex;border:1px solid var(--linha);border-radius:8px;overflow:hidden;background:var(--sup)}
+.seg label{cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:6px 16px;color:var(--suave);font-weight:500}
+.seg input:checked+span{background:var(--azul);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--azul);outline-offset:-2px}
+.seg.mini span{padding:3px 10px;font-size:12.5px}
+
+/* formulários */
+.grade-form{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 14px}
+.grade-form label,.rotulo-campo{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--suave)}
+.g2{grid-column:span 2}.g3{grid-column:span 3}.g4{grid-column:span 4}.g6{grid-column:span 6}
+.grade-form label.check,.check{flex-direction:row!important;align-items:center;gap:8px;color:var(--tinta)!important}
+.secao-form{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--fraco);grid-column:span 6;margin-top:6px;padding-top:10px;border-top:1px solid var(--linha2)}
+.secao-form:first-child{border-top:0;padding-top:0;margin-top:0}
+.oculto-tipo{display:none!important}
+.avancado{margin-top:14px}
+.avancado summary{cursor:pointer;color:var(--azul);font-weight:500;font-size:13px}
+.diag{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:6px}
+.diag li{display:grid;grid-template-columns:22px 90px 1fr;gap:8px;align-items:start;font-size:13px}
+.diag li i{font-style:normal;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:#fff;font-weight:600}
+.diag li.ok i{background:var(--ok)} .diag li.falha i{background:var(--erro)} .diag li.pulado i{background:#C7CDD6}
+.diag li b{font-weight:500} .diag li.pulado{color:var(--fraco)}
+
+/* ====== tela de conexões (evolução da tela "Abra um projeto") ====== */
+#entrada{min-height:100vh;padding:32px 24px}
+.entrada-caixa{max-width:1120px;margin:0 auto}
+.marca{display:flex;align-items:center;gap:10px}
+.marca b{font-size:18px;font-weight:600}
+.marca small{color:var(--fraco);font-weight:500}
+.entrada-topo{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;gap:16px}
+.entrada-grade{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:20px;align-items:start}
+.lista-proj{border:1px solid var(--linha);border-radius:10px;background:var(--sup);overflow:hidden}
+.proj{padding:12px 14px;border-top:1px solid var(--linha2)}
+.proj:first-child{border-top:0}
+.proj.ativa{background:#FBFCFF;box-shadow:inset 3px 0 0 var(--azul)}
+.proj.editando{background:var(--azul-claro)}
+.proj .linha1{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.proj .linha1 b{word-break:break-word}
+.proj .alvo{font-size:12.5px;color:var(--suave);margin-top:2px;word-break:break-all}
+.proj .acoes{margin-top:8px;gap:4px}
+.vazio{padding:22px 16px;color:var(--suave);text-align:center}
+
+/* ====== casca do Workbench ====== */
+#app{display:grid;grid-template-columns:290px minmax(0,1fr);height:100vh}
+.trilho{background:var(--sup);border-right:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
+.trilho-topo{padding:16px 14px 10px}
+.trilho .marca{padding:0 4px;margin-bottom:14px}
+.status-con{border:1px solid var(--linha);border-radius:10px;padding:10px 12px;display:grid;gap:2px;font-size:13px}
+.status-linha{display:flex;align-items:center;gap:8px;font-weight:600}
+.status-linha .nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ponto-st{width:9px;height:9px;border-radius:50%;flex:none;background:#AEB7C4}
+.st-conectado .ponto-st{background:var(--ok);box-shadow:0 0 0 3px var(--ok-claro)}
+.st-conectando .ponto-st{background:var(--azul);animation:pulso 1s infinite}
+.st-erro .ponto-st{background:var(--erro);box-shadow:0 0 0 3px var(--erro-claro)}
+@keyframes pulso{50%{opacity:.3}}
+.status-txt{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-left:auto;color:var(--fraco)}
+.st-conectado .status-txt{color:var(--ok)} .st-erro .status-txt{color:var(--erro)} .st-conectando .status-txt{color:var(--azul)}
+.status-con .det{color:var(--suave);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav{display:grid;gap:2px;margin-top:12px}
+.nav button{all:unset;cursor:pointer;padding:7px 10px;border-radius:6px;color:var(--suave);font-weight:500;display:flex;gap:10px;align-items:center}
+.nav button:hover{background:var(--fundo);color:var(--tinta)}
+.nav button.ativo{background:var(--azul-claro);color:var(--azul)}
+.nav button:focus-visible{outline:2px solid var(--azul)}
+.nav kbd{margin-left:auto;font:11px var(--mono);color:var(--fraco)}
+.explorador{border-top:1px solid var(--linha2);padding:10px 14px 0;display:flex;flex-direction:column;min-height:0;flex:1}
+.explorador .rotulo{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--fraco);display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#sel-container{width:100%;margin-bottom:8px}
+.busca-arvore{display:flex;gap:6px;margin-bottom:8px}
+.busca-arvore input{flex:1;width:100%}
+.arvore{overflow:auto;flex:1;margin:0 -14px;padding:0 6px 12px;font-size:13px}
+.no{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:6px;width:100%;padding:3px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;line-height:20px}
+.no:hover{background:var(--fundo)}
+.no.ativo{background:var(--azul-claro);color:var(--azul)}
+.no:focus-visible{outline:2px solid var(--azul);outline-offset:-2px}
+.no .seta{width:12px;flex:none;color:var(--fraco);transition:transform .12s;display:inline-grid;place-items:center}
+.no.aberto>.seta{transform:rotate(90deg)}
+.no .rot{overflow:hidden;text-overflow:ellipsis}
+.no small{color:var(--fraco);margin-left:auto;padding-left:8px}
+.no.atual>.rot{font-weight:600}
+.filhos{padding-left:14px}
+.no .ic{flex:none;display:inline-grid}
+.no.grupo{color:var(--suave);font-size:12.5px}
+.arvore .msg{padding:4px 10px 4px 30px;color:var(--fraco);font-size:12.5px}
+.res-busca .no .cont{color:var(--fraco);font-size:12px}
+mark{background:#FFF0B3;color:inherit;border-radius:2px}
+.rodape-trilho{border-top:1px solid var(--linha2);padding:10px 14px;display:flex;justify-content:space-between}
+
+main{min-width:0;min-height:0;overflow:auto;padding:20px 26px 28px;display:flex;flex-direction:column}
+.cab-vista{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}
+.migalha{font-size:12.5px;color:var(--suave);display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vazio-grande{margin:auto;text-align:center;color:var(--suave);max-width:440px;padding:40px 0}
+.vazio-grande h2{color:var(--tinta);margin:12px 0 6px}
+
+/* abas (estilo das etapas do Anonimizador) */
+.abas{display:flex;border-bottom:1px solid var(--linha);margin-bottom:12px}
+.aba{all:unset;cursor:pointer;padding:6px 2px 9px;margin-right:22px;color:var(--fraco);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.aba:hover{color:var(--tinta)}
+.aba.atual{color:var(--azul);border-bottom-color:var(--azul)}
+.aba:focus-visible{outline:2px solid var(--azul)}
+
+/* barra de ferramentas do grid */
+.barra-grid{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.barra-grid .filtro-rapido{width:200px}
+.barra-grid .where{flex:1;min-width:220px;font-family:var(--mono);font-size:12.5px}
+.barra-grid .esp{flex:1}
+.status-grid{font-size:12.5px;color:var(--suave);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.status-grid .ok{color:var(--ok);font-weight:600}
+
+/* grid de dados (tabela-bloco do Anonimizador com cabeçalho fixo e alta densidade) */
+.tabela-bloco{border:1px solid var(--linha);border-radius:10px;background:var(--sup);overflow:hidden}
+.grade-wrap{overflow:auto;max-height:calc(100vh - 290px);min-height:120px;position:relative}
+table{border-collapse:collapse;width:100%}
+th{font-weight:500;color:var(--suave);font-size:12.5px;text-align:left;padding:8px 14px;border-bottom:1px solid var(--linha2);white-space:nowrap}
+td{padding:7px 14px;border-bottom:1px solid var(--linha2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+table.grade{width:max-content;min-width:100%;font-size:12.5px}
+table.grade th{position:sticky;top:0;z-index:2;background:#FBFCFD;padding:6px 10px;border-right:1px solid var(--linha2);cursor:pointer;user-select:none}
+table.grade th:hover{color:var(--tinta)}
+table.grade th .tp{display:block;font-size:10.5px;color:var(--fraco);font-weight:400}
+table.grade th.ord::after{content:" ▾";color:var(--azul)} table.grade th.ord.asc::after{content:" ▴"}
+table.grade td{padding:4px 10px;border-right:1px solid var(--linha2);white-space:nowrap;max-width:360px;overflow:hidden;text-overflow:ellipsis;cursor:cell}
+table.grade td.num{text-align:right}
+table.grade td.n,table.grade th.n{position:sticky;left:0;z-index:1;background:#FBFCFD;color:var(--fraco);text-align:right;min-width:44px;cursor:default;font-size:11.5px}
+table.grade th.n{z-index:3}
+table.grade tbody tr:hover td{background:#F8FAFF}
+table.grade tbody tr:hover td.n{background:#F1F5FE}
+table.grade td.sel{outline:2px solid var(--azul);outline-offset:-2px;background:var(--azul-claro)!important}
+.nulo{color:var(--fraco);font-style:italic;font-size:11.5px;letter-spacing:.02em}
+.cortado{color:var(--fraco)}
+.estrutura td{font-size:13px;padding:6px 12px}
+.estrutura th{padding:7px 12px;position:sticky;top:0;background:#FBFCFD;z-index:1}
+.estrutura .pk{color:var(--alerta);font-weight:600}
+.estrutura .tipo{font-family:var(--mono);font-size:12.5px;color:var(--azul-esc)}
+.sim{color:var(--ok)} .nao{color:var(--fraco)}
+.meta-extra{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:12px;font-size:12.5px;color:var(--suave)}
+.meta-extra b{color:var(--tinta);font-weight:500}
+
+/* editor SQL */
+.contexto-sql{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--suave)}
+.contexto-sql select{padding:4px 8px}
+.editor{display:grid;grid-template-columns:auto 1fr;border:1px solid var(--linha);border-radius:10px;background:var(--sup);overflow:hidden;height:220px;min-height:110px;resize:vertical}
+.editor:focus-within{border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-claro)}
+.calha{background:#FBFCFD;border-right:1px solid var(--linha2);color:var(--fraco);text-align:right;padding:10px 8px 10px 12px;font:13px/20px var(--mono);overflow:hidden;user-select:none;white-space:pre}
+.area{position:relative;overflow:hidden}
+.area pre,.area textarea{margin:0;position:absolute;inset:0;padding:10px 12px;font:13px/20px var(--mono);white-space:pre;overflow:auto;tab-size:2;border:0;letter-spacing:0}
+.area pre{pointer-events:none;color:var(--tinta)}
+.area textarea{background:transparent;color:transparent;caret-color:var(--tinta);resize:none;outline:none;box-shadow:none!important}
+.area textarea::selection{background:rgba(31,79,209,.18);color:transparent}
+.sx-k{color:#1F4FD1;font-weight:600} .sx-s{color:#0E7F72} .sx-n{color:#B76A06} .sx-c{color:#8A94A3;font-style:italic} .sx-f{color:#7046D9} .sx-q{color:#B5389E}
+.barra-editor{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.historico{position:absolute;right:0;top:calc(100% + 6px);width:min(560px,80vw);max-height:360px;overflow:auto;background:var(--sup);border:1px solid var(--linha);border-radius:10px;box-shadow:0 10px 30px rgba(24,33,45,.12);z-index:20}
+.historico button{all:unset;box-sizing:border-box;display:block;width:100%;padding:8px 12px;border-top:1px solid var(--linha2);cursor:pointer}
+.historico button:first-child{border-top:0}
+.historico button:hover,.historico button:focus-visible{background:var(--azul-claro)}
+.historico code{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tinta)}
+.historico small{color:var(--fraco)}
+
+/* modal */
+.modal-fundo{position:fixed;inset:0;background:rgba(24,33,45,.32);display:grid;place-items:center;z-index:40;padding:20px}
+.modal{background:var(--sup);border-radius:12px;box-shadow:0 20px 50px rgba(24,33,45,.25);width:min(640px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column}
+.modal.largo{width:min(820px,100%)}
+.modal-cab{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 10px}
+.modal-corpo{padding:4px 20px 16px;overflow:auto}
+.modal-rodape{padding:12px 20px 16px;border-top:1px solid var(--linha2);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.fechar{all:unset;cursor:pointer;color:var(--fraco);padding:4px 6px;border-radius:6px;font-size:18px;line-height:1}
+.fechar:hover{background:var(--fundo);color:var(--tinta)}
+.valor-celula{font:12.5px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word;background:var(--fundo);border-radius:8px;padding:12px;max-height:50vh;overflow:auto;margin:0}
+.colunas-banco{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow:auto;padding:2px}
+.colunas-banco label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--linha);border-radius:6px;padding:3px 9px;font-size:12.5px;cursor:pointer;background:var(--sup)}
+.colunas-banco label small{color:var(--fraco)}
+.opcao-exp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 14px}
+.modo{display:block;border:1px solid var(--linha);border-radius:10px;background:var(--sup);padding:10px 14px;cursor:pointer;position:relative}
+.modo input{position:absolute;opacity:0;pointer-events:none}
+.modo:has(input:checked){border-color:var(--azul);box-shadow:inset 0 0 0 1px var(--azul);background:#FBFCFF}
+.modo:has(input:focus-visible){outline:2px solid var(--azul);outline-offset:2px}
+.modo:has(input:disabled){opacity:.5;cursor:not-allowed}
+.modo h3{display:flex;align-items:center;gap:8px}
+.modo h3::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid #AEB7C4;flex:none}
+.modo:has(input:checked) h3::before{border:4px solid var(--azul)}
+.modo p{color:var(--suave);font-size:12.5px;margin-top:2px}
+.sql-usado{font:12px/1.5 var(--mono);background:var(--fundo);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;margin-top:6px;color:var(--suave)}
+
+@media (max-width:1180px){
+  #app{grid-template-columns:250px minmax(0,1fr)}
+  main{padding:16px 18px 20px}
+  .entrada-grade{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:760px){
+  .grade-form{grid-template-columns:minmax(0,1fr)}
+  .g2,.g3,.g4,.g6,.secao-form{grid-column:auto}
+  #app{grid-template-columns:minmax(0,1fr);height:auto}
+  .trilho{max-height:60vh}
+  .opcao-exp{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-tabela" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 6h13M1.5 9.5h13M6 6v7.5" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-view" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 1.4"/><path d="M1.5 6h13" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-db" viewBox="0 0 16 16"><ellipse cx="8" cy="3.8" rx="5.5" ry="2.1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 3.8v8.4c0 1.2 2.5 2.1 5.5 2.1s5.5-.9 5.5-2.1V3.8M2.5 8c0 1.2 2.5 2.1 5.5 2.1s5.5-.9 5.5-2.1" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-seta" viewBox="0 0 10 10"><path d="M3.5 2l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M4.5 3v10l8-5z" fill="currentColor"/></symbol>
+  <symbol id="i-atualizar" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-baixar" viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.8 8 10.3l3.5-3.5M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sql" viewBox="0 0 16 16"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-busca" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 16 16"><path d="M6 1.5v3M10 1.5v3M4 4.5h8v2.5a4 4 0 0 1-8 0zM8 11v3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-relogio" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.5V8l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-cadeado" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+</svg>
+
+<!-- ============== conexões (mesmo papel da tela "Abra um projeto") ============== -->
+<section id="entrada" class="oculto">
+  <div class="entrada-caixa">
+    <div class="entrada-topo">
+      <div class="marca">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="#1F4FD1"/><ellipse cx="14" cy="9" rx="6.5" ry="2.6" fill="none" stroke="#fff" stroke-width="2"/><path d="M7.5 9v9.5c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6V9" fill="none" stroke="#fff" stroke-width="2"/><path d="M7.5 13.8c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6" fill="none" stroke="#9DB5F2" stroke-width="2"/></svg>
+        <b>SQL Workbench</b> <small>somente leitura</small>
+      </div>
+      <div class="acoes"><button class="btn oculto" id="btn-voltar-wb">Voltar ao Workbench</button><button class="btn link" id="btn-sair-ent" style="color:var(--suave)">Encerrar</button></div>
+    </div>
+    <div id="drivers-aviso"></div>
+    <div class="entrada-grade">
+      <div>
+        <div class="acoes" style="justify-content:space-between;margin-bottom:10px"><h2>Conexões salvas</h2><button class="btn prim peq" id="btn-nova-con">Nova conexão</button></div>
+        <div id="lista-con" class="lista-proj"></div>
+        <p class="fraco" style="font-size:12.5px;margin-top:10px" id="cofre-info"></p>
+      </div>
+
+      <div class="bloco" id="form-con">
+        <div class="acoes" style="justify-content:space-between;margin-bottom:14px"><h2 id="form-titulo">Nova conexão</h2>
+          <div class="seg" role="radiogroup" aria-label="Tipo de banco">
+            <label><input type="radio" name="btipo" value="mysql" checked><span>MySQL</span></label>
+            <label><input type="radio" name="btipo" value="oracle"><span>Oracle</span></label>
+          </div>
+        </div>
+        <div class="grade-form">
+          <div class="secao-form">Identificação</div>
+          <label class="g6">Nome da conexão<input type="text" id="b-nome" placeholder="ex.: DW Produção" maxlength="80"></label>
+
+          <div class="secao-form">Servidor</div>
+          <label class="g6 so-oracle oculto-tipo check" style="font-size:13px"><input type="checkbox" id="b-usar-dsn"> Usar string de conexão (host:porta/SERVIÇO, nome TNS ou descritor), como no seu script</label>
+          <label class="g6 so-oracle so-dsn oculto-tipo">String de conexão<input type="text" id="b-dsn" placeholder="ex.: ora-servidor:1521/SERVICO"></label>
+          <label class="g4 endereco">Host / IP<input type="text" id="b-host" placeholder="servidor ou IP"></label>
+          <label class="g2 endereco">Porta<input type="text" id="b-porta" placeholder="3306" inputmode="numeric"></label>
+          <label class="g6 so-mysql"><span>Database <span class="fraco">· opcional, define o database inicial</span></span><input type="text" id="b-database" placeholder="nome do database"></label>
+          <div class="g2 so-oracle endereco oculto-tipo rotulo-campo">Identificar por
+            <div class="seg mini" role="radiogroup" aria-label="Service Name ou SID">
+              <label><input type="radio" name="bmodo" value="service" checked><span>Service Name</span></label>
+              <label><input type="radio" name="bmodo" value="sid"><span>SID</span></label>
+            </div></div>
+          <label class="g4 so-oracle endereco oculto-tipo"><span id="rot-servico">Service Name</span><input type="text" id="b-servico" placeholder="ex.: ORCLPDB1"></label>
+
+          <div class="secao-form">Autenticação</div>
+          <label class="g3">Usuário<input type="text" id="b-usuario" autocomplete="off"></label>
+          <label class="g3">Senha<input type="password" id="b-senha" autocomplete="new-password"></label>
+          <label class="g6 check" style="font-size:13px"><input type="checkbox" id="b-salvar-senha" checked> Salvar a senha <span class="fraco" id="rot-cofre">(cifrada)</span></label>
+        </div>
+        <details class="avancado"><summary>Opções avançadas</summary>
+          <div class="grade-form" style="margin-top:10px">
+            <label class="g6 so-oracle oculto-tipo"><span>Pasta do Oracle Client <span class="fraco">· a pasta bin; deixe em branco para detectar sozinho</span></span><input type="text" id="b-instant" placeholder="C:\ORACLE19c\product\19.0.0\client_1\bin"></label>
+            <p class="g6 so-oracle oculto-tipo fraco" id="b-clients" style="font-size:12.5px;margin:0"></p>
+            <label class="g6 so-mysql check"><input type="checkbox" id="b-ssl"> Usar SSL (servidores que exigem conexão segura)</label>
+          </div>
+        </details>
+        <div class="acoes" style="margin-top:16px">
+          <button class="btn" id="b-testar">Testar conexão</button>
+          <button class="btn" id="b-diag">Diagnosticar</button>
+          <span style="flex:1"></span>
+          <button class="btn link" id="b-cancelar">Cancelar</button>
+          <button class="btn" id="b-salvar">Salvar</button>
+          <button class="btn prim" id="b-salvar-con">Salvar e conectar</button>
+        </div>
+        <div id="b-status" style="margin-top:12px"></div>
+        <ol class="diag oculto" id="b-diag-lista"></ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== Workbench ============== -->
+<div id="app" class="oculto">
+  <aside class="trilho">
+    <div class="trilho-topo">
+      <div class="marca">
+        <svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="#1F4FD1"/><ellipse cx="14" cy="9" rx="6.5" ry="2.6" fill="none" stroke="#fff" stroke-width="2"/><path d="M7.5 9v9.5c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6V9" fill="none" stroke="#fff" stroke-width="2"/><path d="M7.5 13.8c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6" fill="none" stroke="#9DB5F2" stroke-width="2"/></svg>
+        <b>SQL Workbench</b>
+      </div>
+      <div class="status-con st-desconectado" id="status-con" title="Clique para verificar a conexão" role="button" tabindex="0">
+        <div class="status-linha"><i class="ponto-st"></i><span class="nome" id="st-nome">—</span><span class="status-txt" id="st-txt">Desconectado</span></div>
+        <div class="det" id="st-alvo"></div>
+        <div class="det" id="st-ctx"></div>
+      </div>
+      <nav class="nav" aria-label="Seções">
+        <button data-vista="objeto" class="ativo"><svg width="16" height="16"><use href="#i-tabela"/></svg>Explorador</button>
+        <button data-vista="sql"><svg width="16" height="16"><use href="#i-sql"/></svg>Editor SQL<kbd>Ctrl+E</kbd></button>
+        <button data-vista="conexoes"><svg width="16" height="16"><use href="#i-plug"/></svg>Conexões</button>
+      </nav>
+    </div>
+    <div class="explorador">
+      <div class="rotulo"><span id="rot-container">Schema</span><button class="btn link peq" id="btn-recarregar-arvore" title="Recarregar a lista" style="padding:0 2px"><svg width="14" height="14"><use href="#i-atualizar"/></svg></button></div>
+      <select id="sel-container" aria-label="Database ou schema atual"></select>
+      <div class="busca-arvore">
+        <input type="search" id="busca" placeholder="Pesquisar tabela ou view" aria-label="Pesquisar tabela ou view" autocomplete="off">
+      </div>
+      <div class="acoes" style="margin:-2px 0 8px;font-size:12.5px;gap:6px"><span class="fraco">Pesquisar em</span>
+        <div class="seg mini" role="radiogroup" aria-label="Escopo da pesquisa">
+          <label><input type="radio" name="escopo" value="atual" checked><span id="rot-escopo-atual">Schema atual</span></label>
+          <label><input type="radio" name="escopo" value="todos"><span>Todos</span></label>
+        </div></div>
+      <div class="arvore" id="arvore" role="tree"></div>
+    </div>
+    <div class="rodape-trilho">
+      <button class="btn link" id="btn-desconectar">Desconectar</button>
+      <button class="btn link" id="btn-sair" style="color:var(--suave)">Encerrar</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- OBJETO -->
+    <section id="vista-objeto" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div id="obj-vazio" class="vazio-grande">
+        <svg width="40" height="40" style="color:var(--azul-med)"><use href="#i-db"/></svg>
+        <h2>Escolha uma tabela ou view</h2>
+        <p>Navegue pela árvore à esquerda ou pesquise pelo nome. Para consultas livres, abra o <button class="btn link" style="padding:0" data-ir="sql">Editor SQL</button>.</p>
+      </div>
+      <div id="obj" class="oculto" style="display:flex;flex-direction:column;flex:1;min-height:0">
+        <div class="cab-vista">
+          <div style="min-width:0">
+            <div class="migalha" id="obj-migalha"></div>
+            <h1 id="obj-nome" style="word-break:break-all"></h1>
+            <div class="chips" id="obj-chips"></div>
+          </div>
+          <div class="acoes" style="flex:none">
+            <button class="btn" id="obj-atualizar"><svg width="15" height="15"><use href="#i-atualizar"/></svg>Atualizar</button>
+            <button class="btn" id="obj-editor"><svg width="15" height="15"><use href="#i-sql"/></svg>Abrir no Editor</button>
+            <button class="btn prim" id="obj-exportar"><svg width="15" height="15"><use href="#i-baixar"/></svg>Exportar</button>
+          </div>
+        </div>
+        <div class="abas" role="tablist">
+          <button class="aba atual" data-aba="dados" role="tab">Dados</button>
+          <button class="aba" data-aba="estrutura" role="tab">Estrutura</button>
+        </div>
+        <div id="aba-dados">
+          <div class="barra-grid">
+            <input type="search" class="filtro-rapido" id="dados-filtro" placeholder="Filtrar linhas carregadas" aria-label="Filtrar linhas carregadas">
+            <input type="text" class="where" id="dados-where" placeholder="Filtro no banco (WHERE), ex.: STATUS = 'ABERTO'" aria-label="Filtro WHERE">
+            <button class="btn peq" id="dados-aplicar">Aplicar</button>
+          </div>
+          <div class="status-grid" id="dados-status" style="margin-bottom:8px"></div>
+          <div id="dados-grade"></div>
+        </div>
+        <div id="aba-estrutura" class="oculto"></div>
+      </div>
+    </section>
+
+    <!-- EDITOR SQL -->
+    <section id="vista-sql" class="oculto" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="cab-vista">
+        <div><h1>Editor SQL</h1>
+          <div class="contexto-sql" style="margin-top:6px"><svg width="14" height="14"><use href="#i-cadeado"/></svg><span>Somente leitura · SELECT e WITH</span><span class="fraco">·</span>
+            <span id="sql-conexao"></span><span class="fraco">·</span><label for="sql-container" id="rot-sql-container">Schema</label><select id="sql-container"></select></div>
+        </div>
+      </div>
+      <div class="editor" id="editor">
+        <div class="calha" id="calha">1</div>
+        <div class="area"><pre id="realce" aria-hidden="true"></pre><textarea id="sql" spellcheck="false" autocomplete="off" aria-label="Consulta SQL" placeholder="SELECT * FROM tabela WHERE ..."></textarea></div>
+      </div>
+      <div class="barra-editor">
+        <button class="btn prim" id="sql-executar"><svg width="14" height="14"><use href="#i-play"/></svg>Executar <span style="opacity:.75;font-size:12px">Ctrl+Enter</span></button>
+        <button class="btn" id="sql-limpar">Limpar</button>
+        <div style="position:relative"><button class="btn" id="sql-hist-btn" aria-expanded="false"><svg width="15" height="15"><use href="#i-relogio"/></svg>Histórico</button><div class="historico oculto" id="sql-hist"></div></div>
+        <span class="fraco" style="font-size:12.5px">Com texto selecionado, executa só a seleção. Com várias consultas, executa a que está no cursor.</span>
+      </div>
+      <div id="sql-resultado"></div>
+    </section>
+  </main>
+</div>
+
+<div id="modais"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtN = n => n == null || n === "" ? "" : Number(n).toLocaleString("pt-BR");
+const ic = (id, t = 15) => `<svg width="${t}" height="${t}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const S = {estado: null, sessao: null, status: "desconectado", vista: "objeto", containers: [], objetos: {}, abertos: new Set(),
+  editando: null, obj: null, meta: null, dados: null, sql: {ultimo: null, pagina: 0}};
+
+/* ---------------- comunicação com o backend ---------------- */
+async function api(caminho, opcoes = {}) {
+  let r;
+  try { r = await fetch(caminho, opcoes); }
+  catch (e) { const err = new Error("O Workbench não está respondendo. Verifique se a janela preta do servidor continua aberta."); err.categoria = "servidor"; throw err; }
+  let dados = null;
+  try { dados = await r.json(); } catch (e) {}
+  if (!r.ok) {
+    const err = new Error(dados && dados.detail ? (typeof dados.detail === "string" ? dados.detail : "Dados inválidos enviados ao servidor.") : `Erro ${r.status}`);
+    err.categoria = dados && dados.categoria; err.detalhe = dados && dados.detalhe;
+    if (err.categoria === "conexao") marcarStatus("erro");
+    if (err.categoria === "sem_sessao") { S.sessao = null; marcarStatus("desconectado"); }
+    throw err;
+  }
+  return dados;
+}
+const postJSON = (c, corpo, metodo = "POST") => api(c, {method: metodo, headers: {"Content-Type": "application/json"}, body: JSON.stringify(corpo)});
+const getJSON = (c, params) => api(c + (params ? "?" + new URLSearchParams(params) : ""));
+
+function toast(msg, tipo = "", ms = 3200) {
+  const t = document.createElement("div"); t.className = "toast " + tipo; t.textContent = msg; t.setAttribute("role", "status");
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
+}
+function erroHTML(e, titulo) {
+  const bloq = e.categoria === "bloqueado";
+  return `<div class="erro-caixa ${bloq ? "bloqueado" : ""}" role="alert">${bloq ? ic("cadeado", 14) + " " : ""}<b>${esc(titulo || (bloq ? "Comando bloqueado" : "Não foi possível concluir"))}.</b> ${esc(e.message)}
+    ${e.detalhe ? `<details><summary>Detalhes técnicos</summary><code>${esc(e.detalhe)}</code></details>` : ""}</div>`;
+}
+
+/* ---------------- modal e confirmação ---------------- */
+function modal({titulo, corpo, rodape = "", largo = false, aoFechar}) {
+  const fundo = document.createElement("div"); fundo.className = "modal-fundo";
+  fundo.innerHTML = `<div class="modal ${largo ? "largo" : ""}" role="dialog" aria-modal="true" aria-label="${esc(titulo)}">
+    <div class="modal-cab"><h2>${esc(titulo)}</h2><button class="fechar" aria-label="Fechar">✕</button></div>
+    <div class="modal-corpo">${corpo}</div>${rodape ? `<div class="modal-rodape">${rodape}</div>` : ""}</div>`;
+  $("#modais").appendChild(fundo);
+  const anterior = document.activeElement;
+  const fechar = () => { fundo.remove(); document.removeEventListener("keydown", tecla); aoFechar && aoFechar(); anterior && anterior.focus && anterior.focus(); };
+  const tecla = e => { if (e.key === "Escape") fechar(); };
+  document.addEventListener("keydown", tecla);
+  fundo.querySelector(".fechar").onclick = fechar;
+  fundo.addEventListener("mousedown", e => { if (e.target === fundo) fechar(); });
+  setTimeout(() => { const f = fundo.querySelector("[autofocus], .modal-corpo input, .modal-rodape .prim"); f && f.focus(); }, 30);
+  return {el: fundo, fechar, $: s => fundo.querySelector(s)};
+}
+function confirmar(titulo, texto, botao = "Confirmar", perigo = false) {
+  return new Promise(res => {
+    let ok = false;
+    const m = modal({titulo, corpo: `<p class="suave">${texto}</p>`, rodape: `<button class="btn" data-n>Cancelar</button><button class="btn ${perigo ? "prim" : "prim"}" data-s style="${perigo ? "background:var(--erro);border-color:var(--erro)" : ""}">${esc(botao)}</button>`, aoFechar: () => res(ok)});
+    m.$("[data-n]").onclick = () => m.fechar();
+    m.$("[data-s]").onclick = () => { ok = true; m.fechar(); };
+  });
+}
+
+/* ---------------- inicialização ---------------- */
+async function carregar() {
+  S.estado = await api("/api/estado");
+  S.sessao = S.estado.sessao;
+  if (S.sessao) { marcarStatus("conectado"); mostrarApp(); } else mostrarEntrada();
+}
+
+/* =================================================================== CONEXÕES */
+const tipoBanco = () => document.querySelector("input[name=btipo]:checked").value;
+const PORTAS = {mysql: "3306", oracle: "1521"};
+function ajustarTipo() {
+  const t = tipoBanco(), dsn = t === "oracle" && $("#b-usar-dsn").checked;
+  $$(".so-oracle").forEach(e => e.classList.toggle("oculto-tipo", t !== "oracle"));
+  $$(".so-mysql").forEach(e => e.classList.toggle("oculto-tipo", t !== "mysql"));
+  $$(".so-dsn").forEach(e => e.classList.toggle("oculto-tipo", !dsn));
+  $$(".endereco").forEach(e => { if (dsn) e.classList.add("oculto-tipo"); else if (!e.classList.contains("so-oracle") || t === "oracle") e.classList.remove("oculto-tipo"); });
+  const porta = $("#b-porta");
+  if (!porta.value || Object.values(PORTAS).includes(porta.value)) porta.value = PORTAS[t];
+  porta.placeholder = PORTAS[t];
+  $("#rot-servico").textContent = document.querySelector("input[name=bmodo]:checked").value === "sid" ? "SID" : "Service Name";
+}
+$$("input[name=btipo]").forEach(r => r.onchange = ajustarTipo);
+$$("input[name=bmodo]").forEach(r => r.onchange = ajustarTipo);
+$("#b-usar-dsn").onchange = ajustarTipo;
+
+function cfgForm() {
+  const t = tipoBanco(), dsn = t === "oracle" && $("#b-usar-dsn").checked;
+  return {tipo: t, nome: $("#b-nome").value.trim(), host: dsn ? "" : $("#b-host").value.trim(), porta: dsn ? "" : $("#b-porta").value.trim(),
+    database: t === "mysql" ? $("#b-database").value.trim() : "", servico: t === "oracle" && !dsn ? $("#b-servico").value.trim() : "",
+    modo_servico: document.querySelector("input[name=bmodo]:checked").value, dsn: dsn ? $("#b-dsn").value.trim() : "",
+    usuario: $("#b-usuario").value.trim(), ssl: t === "mysql" && $("#b-ssl").checked,
+    instant_client: t === "oracle" ? $("#b-instant").value.trim() : "", salvar_senha: $("#b-salvar-senha").checked};
+}
+function limparForm() {
+  S.editando = null; $("#form-titulo").textContent = "Nova conexão";
+  ["#b-nome", "#b-host", "#b-database", "#b-servico", "#b-dsn", "#b-usuario", "#b-senha", "#b-instant"].forEach(s => $(s).value = "");
+  $("#b-porta").value = ""; $("#b-usar-dsn").checked = false; $("#b-ssl").checked = false; $("#b-salvar-senha").checked = true;
+  document.querySelector("input[name=bmodo][value=service]").checked = true;
+  $("#b-senha").placeholder = ""; $("#b-status").innerHTML = ""; $("#b-diag-lista").classList.add("oculto");
+  ajustarTipo(); desenharConexoes();
+}
+function preencherForm(c) {
+  S.editando = c.id; $("#form-titulo").textContent = "Editar conexão";
+  document.querySelector(`input[name=btipo][value=${c.tipo}]`).checked = true;
+  $("#b-nome").value = c.nome || ""; $("#b-host").value = c.host || ""; $("#b-porta").value = c.porta || "";
+  $("#b-database").value = c.database || ""; $("#b-servico").value = c.servico || ""; $("#b-dsn").value = c.dsn || "";
+  $("#b-usar-dsn").checked = !!c.dsn; $("#b-usuario").value = c.usuario || ""; $("#b-instant").value = c.instant_client || "";
+  $("#b-ssl").checked = !!c.ssl; $("#b-salvar-senha").checked = c.salvar_senha !== false;
+  document.querySelector(`input[name=bmodo][value=${c.modo_servico === "sid" ? "sid" : "service"}]`).checked = true;
+  $("#b-senha").value = ""; $("#b-senha").placeholder = c.tem_senha ? "•••••• (mantida; digite para trocar)" : "";
+  $("#b-status").innerHTML = ""; $("#b-diag-lista").classList.add("oculto");
+  ajustarTipo(); desenharConexoes(); $("#b-nome").focus();
+}
+function alvoTexto(c) {
+  if (c.tipo === "oracle") return `${c.usuario || ""}@${c.dsn || `${c.host}:${c.porta}${c.modo_servico === "sid" ? ":" : "/"}${c.servico || ""}`}`;
+  return `${c.usuario || ""}@${c.host}:${c.porta}${c.database ? "/" + c.database : ""}`;
+}
+function quando(iso) { if (!iso) return ""; const d = new Date(iso); return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", {hour: "2-digit", minute: "2-digit"}); }
+
+function mostrarEntrada() {
+  $("#app").classList.add("oculto"); $("#entrada").classList.remove("oculto");
+  $("#btn-voltar-wb").classList.toggle("oculto", !S.sessao);
+  const d = S.estado.drivers, falta = [];
+  if (!d.mysql) falta.push("MySQL: " + d.detalhes.mysql);
+  if (!d.oracle) falta.push("Oracle: " + d.detalhes.oracle);
+  $("#drivers-aviso").innerHTML = falta.length ? `<div class="alertas" style="margin-bottom:16px">${falta.map(x => `<div class="alerta">${esc(x)}</div>`).join("")}</div>` : "";
+  const cl = d.oracle_client || [];
+  $("#b-clients").textContent = d.oracle ? (cl.length ? "Oracle Client encontrado: " + cl.join(" · ") : "Nenhum Oracle Client encontrado nas pastas padrão (será usado o modo leve).") : "";
+  $("#cofre-info").textContent = `As senhas salvas ficam cifradas com ${S.estado.cofre} e nunca são mostradas nem enviadas ao navegador.`;
+  $("#rot-cofre").textContent = `(cifrada com ${S.estado.cofre})`;
+  desenharConexoes();
+  if (!S.estado.conexoes.length) limparForm();
+  ajustarTipo();
+}
+function desenharConexoes() {
+  const lista = S.estado.conexoes, box = $("#lista-con");
+  if (!lista.length) { box.innerHTML = `<div class="vazio">Nenhuma conexão salva ainda.<br>Preencha o formulário ao lado, teste e salve.</div>`; return; }
+  box.innerHTML = lista.map(c => {
+    const ativa = S.sessao && S.sessao.id === c.id;
+    return `<div class="proj ${ativa ? "ativa" : ""} ${S.editando === c.id ? "editando" : ""}" data-id="${esc(c.id)}">
+      <div class="linha1"><b>${esc(c.nome)}</b><span class="selo ${c.tipo}">${c.tipo === "oracle" ? "ORACLE" : "MYSQL"}</span></div>
+      <div class="alvo">${esc(alvoTexto(c))}</div>
+      <div class="fraco" style="font-size:12px">${ativa ? '<span style="color:var(--ok);font-weight:600">● conectada agora</span>' : c.ultimo_uso ? "Último uso " + esc(quando(c.ultimo_uso)) : "Nunca usada"}${c.tem_senha ? "" : " · senha não salva"}</div>
+      <div class="acoes"><button class="btn prim peq" data-con>${ativa ? "Abrir" : "Conectar"}</button><button class="btn peq" data-edit>Editar</button><button class="btn link perigo peq" data-del>Excluir</button><span class="erro-msg" data-err></span></div>
+    </div>`;
+  }).join("");
+  $$("#lista-con .proj").forEach(el => {
+    const c = lista.find(x => x.id === el.dataset.id);
+    el.querySelector("[data-con]").onclick = () => conectar(c, el.querySelector("[data-con]"));
+    el.querySelector("[data-edit]").onclick = () => preencherForm(c);
+    el.querySelector("[data-del]").onclick = async () => {
+      if (!await confirmar("Excluir conexão", `A conexão <b>${esc(c.nome)}</b> e a senha salva serão removidas deste computador. O banco não é alterado.`, "Excluir", true)) return;
+      try { const r = await api("/api/conexoes/" + c.id, {method: "DELETE"}); S.estado.conexoes = r.conexoes;
+        if (S.sessao && S.sessao.id === c.id) { S.sessao = null; marcarStatus("desconectado"); $("#btn-voltar-wb").classList.add("oculto"); }
+        if (S.editando === c.id) limparForm(); desenharConexoes(); toast("Conexão excluída."); }
+      catch (e) { toast(e.message, "erro"); }
+    };
+  });
+}
+$("#btn-nova-con").onclick = () => { limparForm(); $("#b-nome").focus(); };
+$("#b-cancelar").onclick = limparForm;
+$("#btn-voltar-wb").onclick = () => mostrarApp();
+
+function statusForm(html) { $("#b-status").innerHTML = html; }
+function corpoTeste() {
+  const senha = $("#b-senha").value;
+  return {cfg: cfgForm(), senha: senha || null, id: S.editando};
+}
+$("#b-testar").onclick = async () => {
+  statusForm(`<span class="suave"><i class="gira"></i> Conectando…</span>`); $("#b-diag-lista").classList.add("oculto");
+  try {
+    const r = await postJSON("/api/conexoes/testar", corpoTeste());
+    statusForm(`<div class="info" style="background:var(--ok-claro);color:var(--ok)"><b>Conexão bem-sucedida</b> em ${fmtN(r.ms)} ms — ${esc(r.versao)} · ${esc(r.driver)}${r.container ? ` · ${tipoBanco() === "oracle" ? "schema" : "database"} atual: ${esc(r.container)}` : ""}</div>`);
+  } catch (e) { statusForm(erroHTML(e, "Falha na conexão")); }
+};
+$("#b-diag").onclick = async () => {
+  const lista = $("#b-diag-lista"); statusForm("");
+  lista.classList.remove("oculto"); lista.innerHTML = `<li class="pulado"><i>…</i><b>Testando</b><span>Isso pode levar até 30 segundos.</span></li>`;
+  try {
+    const r = await postJSON("/api/conexoes/diagnosticar", corpoTeste());
+    const nomes = ["Driver", "Endereço", "Porta", "Login"], feitas = Object.fromEntries(r.etapas.map(e => [e.etapa, e]));
+    const parou = r.etapas.some(e => !e.ok);
+    lista.innerHTML = nomes.filter(n => feitas[n] || parou).map(n => {
+      const e = feitas[n];
+      if (!e) return `<li class="pulado"><i>–</i><b>${n}</b><span>não testado</span></li>`;
+      return `<li class="${e.ok ? "ok" : "falha"}"><i>${e.ok ? "✓" : "✕"}</i><b>${n}</b><span>${esc(e.detalhe)}</span></li>`;
+    }).join("");
+  } catch (e) { lista.innerHTML = `<li class="falha"><i>✕</i><b>Erro</b><span>${esc(e.message)}</span></li>`; }
+};
+async function salvarForm() {
+  const corpo = corpoTeste();
+  const r = S.editando ? await postJSON("/api/conexoes/" + S.editando, corpo, "PUT") : await postJSON("/api/conexoes", corpo);
+  S.estado.conexoes = r.conexoes;
+  if (S.sessao && S.sessao.id === r.conexao.id) { S.sessao = null; marcarStatus("desconectado"); $("#btn-voltar-wb").classList.add("oculto"); }
+  S.editando = r.conexao.id; $("#form-titulo").textContent = "Editar conexão";
+  $("#b-senha").value = ""; $("#b-senha").placeholder = r.conexao.tem_senha ? "•••••• (mantida; digite para trocar)" : "";
+  desenharConexoes();
+  return r.conexao;
+}
+$("#b-salvar").onclick = async () => {
+  try { const c = await salvarForm(); statusForm(`<div class="info">Conexão “${esc(c.nome)}” salva.</div>`); toast("Conexão salva.", "ok"); }
+  catch (e) { statusForm(erroHTML(e, "Não foi possível salvar")); }
+};
+$("#b-salvar-con").onclick = async () => {
+  const senhaDigitada = $("#b-senha").value;
+  let c;
+  try { c = await salvarForm(); } catch (e) { statusForm(erroHTML(e, "Não foi possível salvar")); return; }
+  conectar(c, $("#b-salvar-con"), senhaDigitada);
+};
+
+async function conectar(c, botao, senha) {
+  if (S.sessao && S.sessao.id === c.id) { mostrarApp(); return; }
+  if (!c.tem_senha && !senha) { pedirSenha(c, botao); return; }
+  const txt = botao ? botao.innerHTML : "";
+  if (botao) { botao.disabled = true; botao.innerHTML = `<i class="gira"></i> Conectando…`; }
+  marcarStatus("conectando", c);
+  try {
+    const r = await postJSON("/api/sessao/conectar", {id: c.id, senha: senha || null});
+    S.sessao = r.sessao; marcarStatus("conectado");
+    S.estado.conexoes = (await api("/api/estado")).conexoes;
+    reiniciarWorkbench(); mostrarApp();
+    toast(`Conectado a ${c.nome}.`, "ok");
+  } catch (e) {
+    marcarStatus(S.sessao ? "conectado" : "erro", c);
+    const box = $(`#lista-con .proj[data-id="${c.id}"] [data-err]`);
+    if (e.categoria === "pedir_senha") pedirSenha(c, botao);
+    else { statusForm(erroHTML(e, `Falha ao conectar em ${c.nome}`)); if (box) box.textContent = "Falhou — veja ao lado"; }
+  } finally { if (botao) { botao.disabled = false; botao.innerHTML = txt; } }
+}
+function pedirSenha(c, botao) {
+  const m = modal({titulo: `Senha de ${c.nome}`, corpo: `<p class="suave" style="margin-bottom:10px">Esta conexão não tem senha salva. A senha é usada só nesta sessão e não é gravada.</p>
+    <label class="rotulo-campo">Senha de ${esc(c.usuario || "")}<input type="password" id="m-senha" autocomplete="off" autofocus></label>`,
+    rodape: `<button class="btn" data-n>Cancelar</button><button class="btn prim" data-s>Conectar</button>`});
+  const ir = () => { const s = m.$("#m-senha").value; if (!s) return; m.fechar(); conectar(c, botao, s); };
+  m.$("[data-n]").onclick = () => m.fechar(); m.$("[data-s]").onclick = ir;
+  m.$("#m-senha").addEventListener("keydown", e => { if (e.key === "Enter") ir(); });
+}
+
+/* =================================================================== STATUS DA CONEXÃO */
+function marcarStatus(st, c) {
+  S.status = st;
+  const box = $("#status-con");
+  box.className = "status-con st-" + st;
+  const txt = {conectado: "Conectado", conectando: "Conectando", desconectado: "Desconectado", erro: "Erro"}[st];
+  $("#st-txt").textContent = txt;
+  const s = S.sessao;
+  if (s) {
+    $("#st-nome").textContent = s.nome;
+    $("#st-alvo").textContent = `${s.banco} · ${s.usuario}@${s.alvo}`;
+    $("#st-ctx").innerHTML = `${esc(s.rotulo_container)}: <b style="color:var(--tinta);font-weight:500">${esc(s.container || "—")}</b>`;
+    box.title = `${s.versao} · ${s.driver}\nClique para verificar a conexão.`;
+  } else if (c) { $("#st-nome").textContent = c.nome; $("#st-alvo").textContent = alvoTexto(c); $("#st-ctx").textContent = ""; }
+  else { $("#st-nome").textContent = "Nenhuma conexão"; $("#st-alvo").textContent = ""; $("#st-ctx").textContent = ""; }
+  const ctx = $("#sql-conexao");
+  if (ctx && s) ctx.innerHTML = `<span class="ponto-st" style="display:inline-block;background:${st === "conectado" ? "var(--ok)" : st === "erro" ? "var(--erro)" : "#AEB7C4"}"></span> <b style="color:var(--tinta)">${esc(s.nome)}</b> <span class="selo ${s.tipo}">${s.tipo === "oracle" ? "ORACLE" : "MYSQL"}</span> ${esc(s.usuario)}@${esc(s.alvo)}`;
+}
+async function verificarConexao() {
+  if (!S.sessao) return;
+  marcarStatus("conectando");
+  try { const r = await postJSON("/api/sessao/ping", {}); marcarStatus("conectado"); toast(`Conexão ativa (${r.ms} ms).`, "ok"); }
+  catch (e) { marcarStatus(e.categoria === "sem_sessao" ? "desconectado" : "erro"); toast(e.message, "erro", 5000); }
+}
+$("#status-con").onclick = verificarConexao;
+$("#status-con").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); verificarConexao(); } });
+
+/* =================================================================== WORKBENCH */
+function reiniciarWorkbench() {
+  S.containers = []; S.objetos = {}; S.abertos = new Set(); S.obj = null; S.meta = null; S.dados = null; S.sql = {ultimo: null, pagina: 0};
+  $("#obj").classList.add("oculto"); $("#obj-vazio").classList.remove("oculto"); $("#sql-resultado").innerHTML = ""; $("#busca").value = "";
+}
+function mostrarApp() {
+  if (!S.sessao) { mostrarEntrada(); return; }
+  $("#entrada").classList.add("oculto"); $("#app").classList.remove("oculto");
+  const rot = S.sessao.rotulo_container;
+  $("#rot-container").textContent = rot; $("#rot-sql-container").textContent = rot;
+  $("#rot-escopo-atual").textContent = rot + " atual";
+  marcarStatus(S.status === "erro" ? "erro" : "conectado");
+  if (!S.containers.length) carregarContainers();
+  irPara(S.vista === "conexoes" ? "objeto" : S.vista);
+}
+$$(".nav button").forEach(b => b.onclick = () => irPara(b.dataset.vista));
+$$("[data-ir]").forEach(b => b.onclick = () => irPara(b.dataset.ir));
+function irPara(v) {
+  if (v === "conexoes") { S.vista = "objeto"; mostrarEntrada(); return; }
+  S.vista = v;
+  $$(".nav button").forEach(b => b.classList.toggle("ativo", b.dataset.vista === v));
+  $("#vista-objeto").classList.toggle("oculto", v !== "objeto");
+  $("#vista-sql").classList.toggle("oculto", v !== "sql");
+  if (v === "sql") { desenharRealce(); setTimeout(() => $("#sql").focus(), 0); }
+}
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e" && S.sessao && !$("#app").classList.contains("oculto")) { e.preventDefault(); irPara("sql"); }
+});
+$("#btn-desconectar").onclick = async () => {
+  try { await postJSON("/api/sessao/desconectar", {}); } catch (e) {}
+  S.sessao = null; marcarStatus("desconectado"); reiniciarWorkbench(); S.estado = await api("/api/estado"); mostrarEntrada();
+};
+async function sair() {
+  if (!await confirmar("Encerrar o Workbench", "O servidor local será fechado. As conexões salvas e os arquivos exportados continuam no computador.", "Encerrar")) return;
+  try { await postJSON("/api/sair", {}); } catch (e) {}
+  document.body.innerHTML = '<div style="display:grid;place-items:center;min-height:100vh;color:#5A6575">SQL Workbench encerrado. Você já pode fechar esta aba.</div>';
+}
+$("#btn-sair").onclick = sair; $("#btn-sair-ent").onclick = sair;
+
+/* ---------------- databases / schemas e árvore (carregados sob demanda) ---------------- */
+async function carregarContainers() {
+  $("#arvore").innerHTML = `<div class="msg"><i class="gira"></i> Carregando ${esc(S.sessao.rotulo_container.toLowerCase())}s…</div>`;
+  try {
+    const r = await getJSON("/api/meta/containers");
+    S.containers = r.itens.map(i => i.nome);
+    let atual = S.sessao.container;
+    if (!S.containers.includes(atual)) {
+      // usuário sem objetos próprios (comum no Oracle): começa pelo primeiro schema disponível
+      if (atual && !S.containers.length) S.containers = [atual];
+      else if (S.containers.length) { atual = S.containers[0]; await definirContainer(atual, false); }
+    }
+    preencherSelects();
+    S.abertos.add("c:" + atual);
+    desenharArvore();
+    if (atual) carregarObjetos(atual);
+  } catch (e) { $("#arvore").innerHTML = `<div style="padding:4px 8px">${erroHTML(e, "Falha ao listar")}</div>`; }
+}
+function preencherSelects() {
+  const atual = S.sessao.container;
+  const ops = S.containers.map(c => `<option ${c === atual ? "selected" : ""}>${esc(c)}</option>`).join("");
+  $("#sel-container").innerHTML = ops; $("#sql-container").innerHTML = ops;
+}
+async function definirContainer(c, redesenhar = true) {
+  try { const r = await postJSON("/api/sessao/container", {container: c}); S.sessao = r.sessao; } catch (e) { toast(e.message, "erro"); return; }
+  marcarStatus(S.status); preencherSelects();
+  if (redesenhar) { S.abertos.add("c:" + c); desenharArvore(); if (!S.objetos[c]) carregarObjetos(c); if ($("#busca").value.trim()) pesquisar(); }
+}
+$("#sel-container").onchange = e => definirContainer(e.target.value);
+$("#sql-container").onchange = e => definirContainer(e.target.value);
+$("#btn-recarregar-arvore").onclick = () => { S.objetos = {}; carregarContainers(); };
+
+async function carregarObjetos(c) {
+  S.objetos[c] = "carregando"; desenharArvore();
+  try { const r = await getJSON("/api/meta/objetos", {container: c}); S.objetos[c] = r.itens; }
+  catch (e) { S.objetos[c] = {erro: e}; }
+  desenharArvore();
+  if ($("#busca").value.trim() && escopo() === "atual" && c === S.sessao.container) pesquisar();
+}
+function noObjeto(o, c, termo) {
+  const ativo = S.obj && S.obj.container === c && S.obj.nome === o.nome;
+  const nome = termo ? realcar(o.nome, termo) : esc(o.nome);
+  return `<button class="no obj ${ativo ? "ativo" : ""}" data-c="${esc(c)}" data-o="${esc(o.nome)}" data-t="${o.tipo}" role="treeitem" title="${esc(c + "." + o.nome)}${o.comentario ? " — " + esc(o.comentario) : ""}">
+    <span class="seta"></span><span class="ic" style="color:var(--t-${o.tipo === "VIEW" ? "view" : "tabela"})">${ic(o.tipo === "VIEW" ? "view" : "tabela", 14)}</span><span class="rot">${nome}</span>${o.linhas_estimadas != null && o.linhas_estimadas !== "" ? `<small title="Estimativa das estatísticas do banco">≈${fmtCompacto(o.linhas_estimadas)}</small>` : ""}</button>`;
+}
+function fmtCompacto(n) { n = Number(n); if (n >= 1e9) return (n / 1e9).toFixed(1).replace(".", ",") + " bi"; if (n >= 1e6) return (n / 1e6).toFixed(1).replace(".", ",") + " mi"; if (n >= 1e4) return Math.round(n / 1e3) + " mil"; return fmtN(n); }
+function desenharArvore() {
+  if ($("#busca").value.trim()) return; // a pesquisa ocupa a área
+  const atual = S.sessao.container;
+  const html = S.containers.map(c => {
+    const k = "c:" + c, aberto = S.abertos.has(k), objs = S.objetos[c];
+    let filhos = "";
+    if (aberto) {
+      if (!objs || objs === "carregando") filhos = `<div class="msg"><i class="gira"></i> Carregando…</div>`;
+      else if (objs.erro) filhos = `<div class="msg" style="color:var(--erro)">${esc(objs.erro.message)}</div>`;
+      else {
+        const grupos = [["TABLE", "Tabelas"], ["VIEW", "Views"]].map(([t, rot]) => {
+          const lista = objs.filter(o => o.tipo === t), kg = `g:${c}:${t}`;
+          const ab = S.abertos.has(kg) || (!S.abertos.has("x" + kg) && lista.length <= 400);
+          return `<button class="no grupo ${ab ? "aberto" : ""}" data-g="${esc(kg)}" role="treeitem" aria-expanded="${ab}"><span class="seta">${ic("seta", 10)}</span><span class="rot">${rot}</span><small>${fmtN(lista.length)}</small></button>
+            ${ab ? `<div class="filhos" role="group">${lista.length ? lista.map(o => noObjeto(o, c)).join("") : `<div class="msg">Nenhuma.</div>`}</div>` : ""}`;
+        }).join("");
+        filhos = grupos;
+      }
+    }
+    return `<button class="no cont ${aberto ? "aberto" : ""} ${c === atual ? "atual" : ""}" data-k="${esc(k)}" data-cont="${esc(c)}" role="treeitem" aria-expanded="${aberto}" title="${c === atual ? S.sessao.rotulo_container + " atual" : "Clique para expandir · duplo clique para tornar atual"}">
+      <span class="seta">${ic("seta", 10)}</span><span class="ic" style="color:var(--t-db)">${ic("db", 14)}</span><span class="rot">${esc(c)}</span>${Array.isArray(objs) ? `<small>${fmtN(objs.length)}</small>` : ""}</button>
+      ${aberto ? `<div class="filhos" role="group">${filhos}</div>` : ""}`;
+  }).join("");
+  $("#arvore").innerHTML = html || `<div class="msg">Nenhum ${esc(S.sessao.rotulo_container.toLowerCase())} disponível para este usuário.</div>`;
+  ligarArvore($("#arvore"));
+}
+function ligarArvore(raiz) {
+  raiz.querySelectorAll(".no.cont").forEach(b => {
+    b.onclick = () => { const k = b.dataset.k, c = b.dataset.cont; if (S.abertos.has(k)) S.abertos.delete(k); else { S.abertos.add(k); if (!S.objetos[c]) { carregarObjetos(c); return; } } desenharArvore(); };
+    b.ondblclick = () => definirContainer(b.dataset.cont);
+  });
+  raiz.querySelectorAll(".no.grupo").forEach(b => b.onclick = () => {
+    const k = b.dataset.g, ab = b.classList.contains("aberto");
+    if (ab) { S.abertos.delete(k); S.abertos.add("x" + k); } else { S.abertos.add(k); S.abertos.delete("x" + k); }
+    desenharArvore();
+  });
+  raiz.querySelectorAll(".no.obj").forEach(b => b.onclick = () => abrirObjeto(b.dataset.c, b.dataset.o, b.dataset.t));
+}
+
+/* ---------------- pesquisa (mesmo padrão da busca da Chave do projeto: digita e filtra) ---------------- */
+const escopo = () => document.querySelector("input[name=escopo]:checked").value;
+function realcar(txt, termo) {
+  const i = txt.toLowerCase().indexOf(termo.toLowerCase());
+  if (i < 0) return esc(txt);
+  return esc(txt.slice(0, i)) + "<mark>" + esc(txt.slice(i, i + termo.length)) + "</mark>" + esc(txt.slice(i + termo.length));
+}
+let atrasoBusca, buscaSeq = 0;
+$("#busca").oninput = () => { clearTimeout(atrasoBusca); atrasoBusca = setTimeout(pesquisar, 180); };
+$("#busca").addEventListener("keydown", e => {
+  if (e.key === "Escape") { $("#busca").value = ""; desenharArvore(); }
+  if (e.key === "Enter") { const p = $("#arvore .no.obj"); if (p) p.click(); }
+  if (e.key === "ArrowDown") { const p = $("#arvore .no.obj"); if (p) { e.preventDefault(); p.focus(); } }
+});
+$$("input[name=escopo]").forEach(r => r.onchange = pesquisar);
+async function pesquisar() {
+  const termo = $("#busca").value.trim(), seq = ++buscaSeq;
+  if (!termo) { desenharArvore(); return; }
+  const atual = S.sessao.container, local = S.objetos[atual];
+  const mostrar = (itens, nota) => {
+    if (seq !== buscaSeq) return;
+    const porC = new Map();
+    itens.forEach(o => { if (!porC.has(o.container)) porC.set(o.container, []); porC.get(o.container).push(o); });
+    $("#arvore").innerHTML = `<div class="res-busca">${itens.length ? [...porC].map(([c, l]) => `<div class="no grupo" style="cursor:default"><span class="seta"></span><span class="ic" style="color:var(--t-db)">${ic("db", 14)}</span><span class="rot">${esc(c)}</span><small>${l.length}</small></div><div class="filhos">${l.map(o => noObjeto(o, c, termo)).join("")}</div>`).join("") : `<div class="msg" style="padding-left:10px">Nenhuma tabela ou view encontrada para “${esc(termo)}”.</div>`}${nota ? `<div class="msg" style="padding-left:10px">${nota}</div>` : ""}</div>`;
+    ligarArvore($("#arvore"));
+  };
+  if (escopo() === "atual" && Array.isArray(local)) {
+    // filtro instantâneo sobre a lista já carregada do schema atual
+    const t = termo.toLowerCase();
+    const itens = local.filter(o => o.nome.toLowerCase().includes(t)).sort((a, b) => a.nome.toLowerCase().indexOf(t) - b.nome.toLowerCase().indexOf(t) || a.nome.localeCompare(b.nome)).map(o => ({...o, container: atual}));
+    mostrar(itens.slice(0, 500), itens.length > 500 ? `Mostrando 500 de ${fmtN(itens.length)}. Refine a pesquisa.` : "");
+    return;
+  }
+  if (termo.length < 2) { mostrar([], "Digite pelo menos 2 letras."); return; }
+  $("#arvore").innerHTML = `<div class="msg" style="padding-left:10px"><i class="gira"></i> Pesquisando…</div>`;
+  try {
+    const r = await getJSON("/api/meta/buscar", {termo, container: escopo() === "atual" ? atual : ""});
+    mostrar(r.itens, r.itens.length >= 200 ? "Mostrando os 200 primeiros. Refine a pesquisa." : "");
+  } catch (e) { if (seq === buscaSeq) $("#arvore").innerHTML = `<div style="padding:4px 8px">${erroHTML(e, "Falha na pesquisa")}</div>`; }
+}
+
+/* =================================================================== GRID (componente reutilizado em Dados e no Editor) */
+const RX_NUM = {mysql: /^(TINY|SHORT|LONG|LONGLONG|INT24|FLOAT|DOUBLE|DECIMAL|NEWDECIMAL|YEAR)$/, oracle: /^(NUMBER|BINARY_DOUBLE|BINARY_FLOAT|BINARY_INTEGER)$/};
+function celula(v) {
+  if (v === null || v === undefined) return `<span class="nulo">NULL</span>`;
+  if (typeof v === "object") {
+    if ("bin" in v) return `<span class="nulo">binário · ${fmtN(v.bin)} bytes</span>`;
+    if ("txt" in v) return esc(v.txt.slice(0, 400)) + ` <span class="cortado">… (${fmtN(v.total)} caracteres)</span>`;
+  }
+  const s = String(v);
+  return esc(s.length > 400 ? s.slice(0, 400) + "…" : s);
+}
+function textoCelula(v) {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "object") return "txt" in v ? v.txt : "bin" in v ? "" : JSON.stringify(v);
+  return String(v);
+}
+function montarGrade(alvo, dados, opts = {}) {
+  // dados: {colunas, tipos, linhas, offset}; opts: {numericas:Set, tiposColuna:[], filtro: input}
+  const G = {dados, ordem: null, filtro: "", sel: null, alvo};
+  const num = dados.colunas.map((c, i) => opts.numericas ? opts.numericas.has(i) : RX_NUM[S.sessao.tipo].test(dados.tipos ? dados.tipos[i] : ""));
+  const base = dados.linhas.map((l, i) => ({l, n: (dados.offset || 0) + i + 1}));
+  const desenhar = () => {
+    let linhas = base;
+    if (G.filtro) { const f = G.filtro.toLowerCase(); linhas = linhas.filter(r => r.l.some(v => textoCelula(v).toLowerCase().includes(f))); }
+    if (G.ordem) {
+      const {i, asc} = G.ordem, n = num[i];
+      linhas = [...linhas].sort((a, b) => {
+        const x = a.l[i], y = b.l[i];
+        if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+        const r = n ? Number(textoCelula(x)) - Number(textoCelula(y)) : textoCelula(x).localeCompare(textoCelula(y), "pt-BR", {numeric: true});
+        return asc ? r : -r;
+      });
+    }
+    G.visiveis = linhas;
+    const cab = `<tr><th class="n">#</th>${dados.colunas.map((c, i) => `<th data-i="${i}" class="${G.ordem && G.ordem.i === i ? "ord" + (G.ordem.asc ? " asc" : "") : ""}" title="Ordenar as linhas carregadas">${esc(c)}${opts.tiposColuna && opts.tiposColuna[i] ? `<span class="tp">${esc(opts.tiposColuna[i])}</span>` : ""}</th>`).join("")}</tr>`;
+    const corpo = linhas.length ? linhas.map((r, k) => `<tr data-k="${k}"><td class="n">${r.n}</td>${r.l.map((v, i) => `<td data-i="${i}" class="${num[i] ? "num" : ""}">${celula(v)}</td>`).join("")}</tr>`).join("")
+      : `<tr><td class="n"></td><td colspan="${dados.colunas.length}" class="suave" style="padding:14px 10px">${base.length ? "Nenhuma linha carregada corresponde ao filtro." : "Nenhum registro."}</td></tr>`;
+    alvo.innerHTML = `<div class="tabela-bloco"><div class="grade-wrap" tabindex="0"><table class="grade"><thead>${cab}</thead><tbody>${corpo}</tbody></table></div></div>`;
+    alvo.querySelectorAll("th[data-i]").forEach(th => th.onclick = () => {
+      const i = +th.dataset.i;
+      G.ordem = G.ordem && G.ordem.i === i ? (G.ordem.asc ? {i, asc: false} : null) : {i, asc: true};
+      desenhar(); opts.aoMudar && opts.aoMudar(G);
+    });
+    const wrap = alvo.querySelector(".grade-wrap");
+    wrap.addEventListener("click", e => {
+      const td = e.target.closest("td[data-i]"); if (!td) return;
+      alvo.querySelectorAll("td.sel").forEach(x => x.classList.remove("sel")); td.classList.add("sel");
+      G.sel = {k: +td.parentNode.dataset.k, i: +td.dataset.i};
+    });
+    wrap.addEventListener("dblclick", e => { const td = e.target.closest("td[data-i]"); if (td) verCelula(G, +td.parentNode.dataset.k, +td.dataset.i); });
+    wrap.addEventListener("keydown", e => {
+      if (!G.sel) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && !String(window.getSelection())) { e.preventDefault(); copiar(textoCelula(G.visiveis[G.sel.k].l[G.sel.i]), "Valor copiado."); }
+      if (e.key === "Enter") verCelula(G, G.sel.k, G.sel.i);
+      const mov = {ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowDown: [1, 0], ArrowUp: [-1, 0]}[e.key];
+      if (mov) {
+        e.preventDefault();
+        const k = Math.max(0, Math.min(G.visiveis.length - 1, G.sel.k + mov[0])), i = Math.max(0, Math.min(dados.colunas.length - 1, G.sel.i + mov[1]));
+        const td = alvo.querySelector(`tr[data-k="${k}"] td[data-i="${i}"]`);
+        if (td) { alvo.querySelectorAll("td.sel").forEach(x => x.classList.remove("sel")); td.classList.add("sel"); td.scrollIntoView({block: "nearest", inline: "nearest"}); G.sel = {k, i}; }
+      }
+    });
+  };
+  G.filtrar = f => { G.filtro = f; desenhar(); };
+  G.contagem = () => ({visiveis: G.visiveis.length, total: base.length});
+  desenhar();
+  return G;
+}
+const TIPOS_MYSQL = {VAR_STRING: "varchar", STRING: "char", VARCHAR: "varchar", NEWDECIMAL: "decimal", DECIMAL: "decimal", LONGLONG: "bigint", LONG: "int", INT24: "mediumint", SHORT: "smallint", TINY: "tinyint", FLOAT: "float", DOUBLE: "double", DATE: "date", NEWDATE: "date", DATETIME: "datetime", TIMESTAMP: "timestamp", TIME: "time", YEAR: "year", BLOB: "text/blob", LONG_BLOB: "longtext/blob", MEDIUM_BLOB: "mediumtext/blob", TINY_BLOB: "tinytext/blob", JSON: "json", BIT: "bit", ENUM: "enum", SET: "set", GEOMETRY: "geometry"};
+function tipoAmigavel(t) { if (!t) return ""; return S.sessao.tipo === "mysql" ? (TIPOS_MYSQL[t] || t.toLowerCase()) : t.replace(/^LONG$/, "CLOB/LONG"); }
+async function copiar(txt, msg) {
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) { const t = document.createElement("textarea"); t.value = txt; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+  toast(msg || "Copiado.", "ok", 1600);
+}
+function verCelula(G, k, i) {
+  const r = G.visiveis[k], v = r.l[i], col = G.dados.colunas[i];
+  const extra = v && typeof v === "object" && "txt" in v ? `<p class="alerta" style="margin-top:8px">Mostrando os primeiros ${fmtN(v.txt.length)} de ${fmtN(v.total)} caracteres. A exportação traz o valor completo.</p>` : "";
+  const m = modal({titulo: `${col} · linha ${r.n}`, largo: true,
+    corpo: v === null || v === undefined ? `<p class="nulo" style="font-size:14px">NULL</p>` : `<pre class="valor-celula">${esc(textoCelula(v))}</pre>${extra}`,
+    rodape: `<button class="btn" data-l>Copiar linha</button><button class="btn prim" data-v>Copiar valor</button>`});
+  m.$("[data-v]").onclick = () => copiar(textoCelula(v), "Valor copiado.");
+  m.$("[data-l]").onclick = () => copiar(G.dados.colunas.join("\t") + "\n" + r.l.map(textoCelula).join("\t"), "Linha copiada (com cabeçalho, separada por TAB).");
+}
+
+/* =================================================================== TABELA / VIEW */
+async function abrirObjeto(c, nome, tipo) {
+  S.obj = {container: c, nome, tipo}; S.meta = null; S.dados = null; S.contagem = null;
+  irPara("objeto");
+  $("#obj-vazio").classList.add("oculto"); $("#obj").classList.remove("oculto");
+  $("#arvore").querySelectorAll(".no.obj").forEach(b => b.classList.toggle("ativo", b.dataset.c === c && b.dataset.o === nome));
+  $("#obj-migalha").innerHTML = `${ic("db", 13)} ${esc(c)} <span class="fraco">›</span> <span class="selo ${tipo === "VIEW" ? "view" : "tabela"}">${tipo}</span>`;
+  $("#obj-nome").textContent = nome; $("#obj-chips").innerHTML = `<span class="pilula"><i class="gira"></i> Lendo metadados…</span>`;
+  $("#dados-where").value = ""; $("#dados-filtro").value = "";
+  trocarAba(document.querySelector(".aba.atual").dataset.aba);
+  $("#aba-estrutura").innerHTML = ""; $("#dados-status").innerHTML = ""; $("#dados-grade").innerHTML = "";
+  try {
+    S.meta = await getJSON("/api/meta/detalhes", {container: c, objeto: nome});
+    if (S.obj.nome !== nome) return;
+    desenharCabecalho(); desenharEstrutura();
+  } catch (e) { $("#obj-chips").innerHTML = ""; $("#dados-grade").innerHTML = erroHTML(e, "Não foi possível abrir"); return; }
+  carregarDados();
+}
+function desenharCabecalho() {
+  const o = S.meta.objeto, cols = S.meta.colunas;
+  const est = o.linhas_estimadas != null ? `≈ ${fmtN(o.linhas_estimadas)} registros` : "registros: não estimado";
+  const contagem = S.contagem != null ? `<span class="pilula"><b>${fmtN(S.contagem.total)}</b> registros${S.contagem.where ? " (com filtro)" : ""} · contado em ${fmtN(S.contagem.ms)} ms</span>` : "";
+  $("#obj-chips").innerHTML = `<span class="pilula">${esc(S.sessao.rotulo_container)} <b>${esc(o.container)}</b></span>
+    <span class="pilula"><b>${o.tipo}</b></span><span class="pilula"><b>${fmtN(cols.length)}</b> colunas</span>
+    ${S.meta.pk.length ? `<span class="pilula">PK <b>${esc(S.meta.pk.join(", "))}</b></span>` : ""}
+    <span class="pilula" title="${o.linhas_estimadas != null ? "Estimativa das estatísticas do banco (" + esc(o.estimativa_fonte) + "). Não executa COUNT(*)." : ""}">${est}</span>
+    ${contagem}<button class="btn link peq" id="obj-contar" title="Executa COUNT(*) no banco. Pode demorar em tabelas grandes.">Contar registros exatos</button>`;
+  $("#obj-contar").onclick = contarExato;
+}
+async function contarExato() {
+  const b = $("#obj-contar"), where = $("#dados-where").value.trim();
+  b.innerHTML = `<i class="gira"></i> Contando…`; b.disabled = true;
+  try { const r = await postJSON("/api/dados/contar", {container: S.obj.container, objeto: S.obj.nome, where}); S.contagem = {...r, where}; desenharCabecalho(); }
+  catch (e) { b.disabled = false; b.textContent = "Contar registros exatos"; toast(e.message, "erro", 5000); }
+}
+$$(".aba").forEach(a => a.onclick = () => trocarAba(a.dataset.aba));
+function trocarAba(aba) {
+  $$(".aba").forEach(a => a.classList.toggle("atual", a.dataset.aba === aba));
+  $("#aba-dados").classList.toggle("oculto", aba !== "dados"); $("#aba-estrutura").classList.toggle("oculto", aba !== "estrutura");
+}
+async function carregarDados() {
+  const {container, nome} = S.obj, where = $("#dados-where").value.trim();
+  $("#dados-status").innerHTML = `<i class="gira"></i> Carregando prévia…`;
+  try {
+    const r = await postJSON("/api/dados/previa", {container, objeto: nome, limite: S.estado.config.linhas_previa, where});
+    if (S.obj.nome !== nome) return;
+    S.dados = r;
+    const porNome = Object.fromEntries(S.meta.colunas.map(c => [c.nome, c]));
+    const numericas = new Set(r.colunas.map((c, i) => porNome[c] && porNome[c].categoria === "numero" ? i : -1).filter(i => i >= 0));
+    S.gradeDados = montarGrade($("#dados-grade"), r, {numericas, tiposColuna: r.colunas.map(c => porNome[c] ? porNome[c].tipo : ""), aoMudar: statusDados});
+    if ($("#dados-filtro").value) S.gradeDados.filtrar($("#dados-filtro").value);
+    statusDados();
+  } catch (e) { $("#dados-status").innerHTML = ""; $("#dados-grade").innerHTML = erroHTML(e, "Não foi possível ler os dados"); }
+}
+function statusDados() {
+  const r = S.dados; if (!r) return;
+  const o = r.ordem, n = r.linhas.length, lim = S.estado.config.linhas_previa;
+  let ordem;
+  if (o.tipo === "recentes") ordem = `<span class="ok">✓</span> ${n < lim ? `Todos os ${fmtN(n)} registros` : `Os ${fmtN(n)} registros mais recentes`}, ordenados por <b>${esc(o.coluna)}</b> (decrescente), coluna que registra a inserção.`;
+  else ordem = `<span title="Nenhuma coluna de data de criação/inserção foi encontrada. O maior ID não é usado como critério porque nem sempre indica o registro mais recente.">ⓘ</span> Prévia de ${fmtN(n)} ${n === 1 ? "registro" : "registros"}${n >= lim ? "" : " (todos)"}. Não foi possível determinar tecnicamente quais são os mais recentes: a tabela não tem uma coluna de data de criação/inserção.`;
+  const c = S.gradeDados ? S.gradeDados.contagem() : null;
+  const filtro = c && c.visiveis !== c.total ? ` · <b>${fmtN(c.visiveis)}</b> de ${fmtN(c.total)} linhas visíveis pelo filtro` : "";
+  $("#dados-status").innerHTML = `${ordem}${$("#dados-where").value.trim() ? " · com filtro no banco" : ""}${filtro} <span class="fraco">· ${fmtN(r.tempo_ms)} ms · a exportação não se limita a esta prévia</span>`;
+}
+$("#dados-filtro").oninput = () => { if (S.gradeDados) { S.gradeDados.filtrar($("#dados-filtro").value); statusDados(); } };
+$("#dados-aplicar").onclick = () => { S.contagem = null; if (S.meta) desenharCabecalho(); carregarDados(); };
+$("#dados-where").addEventListener("keydown", e => { if (e.key === "Enter") $("#dados-aplicar").click(); });
+$("#obj-atualizar").onclick = () => { if (S.obj) abrirObjeto(S.obj.container, S.obj.nome, S.obj.tipo); };
+$("#obj-editor").onclick = () => {
+  if (!S.obj) return;
+  const q = S.sessao.tipo === "mysql" ? (n => "`" + n.replace(/`/g, "``") + "`") : (n => /^[A-Z][A-Z0-9_$#]*$/.test(n) ? n : '"' + n.replace(/"/g, '""') + '"');
+  const sql = S.sessao.tipo === "mysql" ? `SELECT *\nFROM ${q(S.obj.container)}.${q(S.obj.nome)}\nLIMIT 100` : `SELECT *\nFROM ${q(S.obj.container)}.${q(S.obj.nome)}\nWHERE ROWNUM <= 100`;
+  const ed = $("#sql"); ed.value = (ed.value.trim() ? ed.value.replace(/\s+$/, "") + "\n\n" : "") + sql;
+  irPara("sql"); ed.setSelectionRange(ed.value.length - sql.length, ed.value.length); desenharRealce();
+};
+
+function desenharEstrutura() {
+  const cols = S.meta.colunas, o = S.meta.objeto;
+  const ext = Object.entries(o.extras || {});
+  $("#aba-estrutura").innerHTML = `
+    ${o.comentario ? `<p class="suave" style="margin-bottom:10px">${esc(o.comentario)}</p>` : ""}
+    <div class="tabela-bloco"><div class="grade-wrap"><table class="estrutura"><thead><tr><th>#</th><th>Coluna</th><th>Tipo</th><th>Tamanho</th><th>Precisão</th><th>Escala</th><th>Nulo</th><th>PK</th><th>Padrão</th><th>Extra</th><th>Comentário</th></tr></thead>
+    <tbody>${cols.map(c => `<tr><td class="fraco">${c.posicao}</td><td><b style="font-weight:500">${esc(c.nome)}</b>${c.nome === S.meta.coluna_insercao ? ' <span class="selo" style="color:var(--ok)" title="Usada para ordenar a prévia pelos registros mais recentes">INSERÇÃO</span>' : ""}</td>
+      <td class="tipo">${esc(c.tipo)}</td><td>${c.tamanho ?? '<span class="fraco">—</span>'}</td><td>${c.precisao ?? '<span class="fraco">—</span>'}</td><td>${c.escala ?? '<span class="fraco">—</span>'}</td>
+      <td>${c.nulo ? '<span class="sim">sim</span>' : '<span class="nao">não</span>'}</td><td>${c.pk ? '<span class="pk">PK</span>' : ""}</td>
+      <td class="mono" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.padrao ?? "")}">${c.padrao == null ? '<span class="fraco">—</span>' : esc(c.padrao)}</td>
+      <td class="suave">${esc(c.extra || "")}</td><td class="suave">${esc(c.comentario || "")}</td></tr>`).join("")}</tbody></table></div></div>
+    ${ext.length ? `<div class="meta-extra">${ext.map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join("")}</div>` : ""}`;
+}
+
+/* =================================================================== EXPORTAÇÃO (fluxo do Anonimizador: coluna de data + De/Até + formato) */
+$("#obj-exportar").onclick = () => { if (S.meta) abrirExportacao({origem: "tabela"}); };
+function opcoesFormato() { return S.estado.formatos.map(f => `<option value="${f.id}">${esc(f.nome)}</option>`).join(""); }
+function abrirExportacao({origem, sql}) {
+  const tabela = origem === "tabela";
+  const datas = tabela ? S.meta.colunas.filter(c => c.categoria === "data") : [];
+  const where = tabela ? $("#dados-where").value.trim() : "";
+  const titulo = tabela ? `Exportar ${S.obj.nome}` : "Exportar resultado da consulta";
+  const corpo = tabela ? `
+    <div class="opcao-exp" role="radiogroup">
+      <label class="modo"><input type="radio" name="ex-modo" value="periodo" ${datas.length ? "checked" : "disabled"}><h3>Por período</h3><p>${datas.length ? "Registros entre duas datas, por uma coluna de data/hora." : "Esta tabela não tem colunas de data/hora."}</p></label>
+      <label class="modo"><input type="radio" name="ex-modo" value="tudo" ${datas.length ? "" : "checked"}><h3>Tabela inteira</h3><p>Todos os registros${where ? " que atendem ao filtro" : ""}.</p></label>
+    </div>
+    <div class="grade-form" id="ex-periodo">
+      <label class="g2">Coluna de referência<select id="ex-coluna">${datas.map(c => `<option value="${esc(c.nome)}" ${c.nome === S.meta.coluna_insercao ? "selected" : ""}>${esc(c.nome)} · ${esc(c.tipo)}</option>`).join("")}</select></label>
+      <label class="g2">Data inicial<input type="date" id="ex-de"></label>
+      <label class="g2">Data final<input type="date" id="ex-ate"></label>
+      <p class="g6 fraco" style="font-size:12.5px;margin-top:-4px">A data final é incluída por inteiro (até 23:59:59). Deixe uma das datas vazia para não limitar daquele lado.</p>
+    </div>
+    ${where ? `<label class="check" style="margin-top:12px;font-size:13px"><input type="checkbox" id="ex-where" checked> Aplicar também o filtro da aba Dados: <code>${esc(where)}</code></label>` : ""}
+    <details class="avancado"><summary>Escolher colunas (${S.meta.colunas.length})</summary>
+      <div class="acoes" style="margin:8px 0 6px"><button class="btn link peq" id="ex-todas">Marcar todas</button><button class="btn link peq" id="ex-nenhuma">Desmarcar todas</button></div>
+      <div class="colunas-banco">${S.meta.colunas.map((c, i) => `<label><input type="checkbox" data-c="${i}" checked> ${esc(c.nome)} <small>${esc(c.tipo)}</small></label>`).join("")}</div></details>
+    <div class="grade-form" style="margin-top:14px"><label class="g3">Formato<select id="ex-formato">${opcoesFormato()}</select></label></div>`
+  : `<p class="suave" style="margin-bottom:12px">A consulta é executada de novo no banco e o resultado <b>completo</b> é gravado no arquivo, não só as linhas mostradas na tela.</p>
+     <div class="sql-usado">${esc(sql)}</div>
+     <div class="grade-form" style="margin-top:14px"><label class="g3">Formato<select id="ex-formato">${opcoesFormato()}</select></label></div>`;
+  const m = modal({titulo, corpo: corpo + `<div id="ex-msg" style="margin-top:12px"></div>`, largo: true,
+    rodape: `<button class="btn" data-n>Cancelar</button><button class="btn prim" data-s>${ic("baixar", 15)} Gerar arquivo</button>`});
+  const ajustar = () => { const p = m.$("input[name=ex-modo]:checked"); if (p) m.$("#ex-periodo").classList.toggle("oculto", p.value !== "periodo"); };
+  m.el.querySelectorAll("input[name=ex-modo]").forEach(r => r.onchange = ajustar); ajustar();
+  if (tabela) {
+    m.$("#ex-todas").onclick = () => m.el.querySelectorAll("[data-c]").forEach(x => x.checked = true);
+    m.$("#ex-nenhuma").onclick = () => m.el.querySelectorAll("[data-c]").forEach(x => x.checked = false);
+  }
+  m.$("[data-n]").onclick = () => m.fechar();
+  m.$("[data-s]").onclick = async () => {
+    const corpo = {origem, formato: m.$("#ex-formato").value};
+    if (tabela) {
+      const marcadas = [...m.el.querySelectorAll("[data-c]:checked")].map(x => S.meta.colunas[+x.dataset.c].nome);
+      if (!marcadas.length) { m.$("#ex-msg").innerHTML = `<div class="alerta">Escolha pelo menos uma coluna.</div>`; return; }
+      Object.assign(corpo, {container: S.obj.container, objeto: S.obj.nome, colunas: marcadas.length === S.meta.colunas.length ? [] : marcadas,
+        where: m.$("#ex-where") && m.$("#ex-where").checked ? where : ""});
+      if (m.$("input[name=ex-modo]:checked").value === "periodo") {
+        const de = m.$("#ex-de").value, ate = m.$("#ex-ate").value;
+        if (!de && !ate) { m.$("#ex-msg").innerHTML = `<div class="alerta">Informe a data inicial, a data final ou as duas.</div>`; return; }
+        if (de && ate && de > ate) { m.$("#ex-msg").innerHTML = `<div class="alerta">A data inicial é maior que a data final.</div>`; return; }
+        corpo.filtro_data = {coluna: m.$("#ex-coluna").value, de, ate};
+      }
+    } else { corpo.sql = sql; corpo.container = S.sessao.container; }
+    m.$("[data-s]").disabled = true;
+    try { const r = await postJSON("/api/exportar", corpo); acompanharExportacao(m, r); }
+    catch (e) { m.$("[data-s]").disabled = false; m.$("#ex-msg").innerHTML = erroHTML(e, "Não foi possível iniciar a exportação"); }
+  };
+}
+function acompanharExportacao(m, {job, sql, params}) {
+  const corpo = m.el.querySelector(".modal-corpo"), rodape = m.el.querySelector(".modal-rodape");
+  corpo.innerHTML = `<div class="progresso" role="status" aria-live="polite"><h3>Gerando arquivo no servidor…</h3><div class="barra indet"><i></i></div><p class="suave" data-det>Conectando…</p></div>
+    <details style="margin-top:10px"><summary class="fraco" style="cursor:pointer;font-size:12.5px">Consulta usada</summary><div class="sql-usado">${esc(sql)}${params && params.length ? "\n-- parâmetros: " + esc(params.join(", ")) : ""}</div></details>`;
+  rodape.innerHTML = `<button class="btn" data-cancel>Cancelar exportação</button>`;
+  rodape.querySelector("[data-cancel]").onclick = async () => { try { await postJSON(`/api/job/${job}/cancelar`, {}); } catch (e) {} rodape.querySelector("[data-cancel]").disabled = true; };
+  const t = setInterval(async () => {
+    let j;
+    try { j = await api("/api/job/" + job); } catch (e) { return; }
+    const det = corpo.querySelector("[data-det]");
+    if (det) det.textContent = `${j.detalhe} · ${Math.round(j.decorrido)} s`;
+    if (j.status === "rodando") return;
+    clearInterval(t);
+    if (j.status === "ok") {
+      const r = j.resultado;
+      corpo.innerHTML = `<div class="info" style="background:var(--ok-claro);color:var(--ok)"><b>Arquivo gerado:</b> ${fmtN(r.linhas)} registros em ${fmtN(j.duracao)} s (${r.bytes >= 1048576 ? (r.bytes / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(r.bytes / 1024)) + " KB"}). O download começou.</div>
+        ${r.truncado ? `<div class="alerta" style="margin-top:8px">O Excel aceita até 1.048.575 linhas por planilha: o arquivo foi cortado nesse limite. Use CSV para o volume completo.</div>` : ""}
+        <p class="suave" style="margin-top:10px;font-size:13px"><b>${esc(r.arquivo)}</b><br>Salvo em ${esc(r.pasta)}</p>`;
+      rodape.innerHTML = `<button class="btn" data-pasta>Abrir pasta</button><a class="btn" href="/api/baixar/${job}" download>Baixar de novo</a><button class="btn prim" data-ok>Fechar</button>`;
+      rodape.querySelector("[data-pasta]").onclick = async () => { try { await postJSON("/api/abrir_pasta", {job}); } catch (e) { toast(e.message, "erro"); } };
+      rodape.querySelector("[data-ok]").onclick = () => m.fechar();
+      const a = document.createElement("a"); a.href = "/api/baixar/" + job; a.download = r.arquivo; document.body.appendChild(a); a.click(); a.remove();
+    } else {
+      const e = new Error(j.erro); e.detalhe = j.detalhe_tecnico; e.categoria = j.categoria;
+      corpo.innerHTML = j.status === "cancelado" ? `<div class="alerta">${esc(j.erro)}</div>` : erroHTML(e, "Exportação interrompida");
+      rodape.innerHTML = `<button class="btn prim" data-ok>Fechar</button>`;
+      rodape.querySelector("[data-ok]").onclick = () => m.fechar();
+    }
+  }, 500);
+  const fecharOriginal = m.fechar;
+  m.fechar = () => { clearInterval(t); fecharOriginal(); };
+}
+
+/* =================================================================== EDITOR SQL */
+const ED = $("#sql"), REALCE = $("#realce"), CALHA = $("#calha");
+const PALAVRAS = new Set(("select from where and or not in is null like between exists as on join inner left right full outer cross union all intersect except minus distinct group by order having limit offset fetch first next rows row only with case when then else end asc desc nulls over partition top rownum dual any some into update delete insert drop alter create truncate grant revoke merge interval date timestamp true false recursive lateral using window values").split(" "));
+const FUNCOES = new Set(("count sum avg min max coalesce nvl nvl2 decode cast convert concat substr substring trim upper lower length round trunc floor ceil to_char to_date to_number sysdate now curdate current_date current_timestamp date_format date_add date_sub datediff ifnull if row_number rank dense_rank lag lead listagg group_concat extract replace instr regexp_like regexp_substr abs mod greatest least").split(" "));
+function realcarSQL(t) {
+  let out = "", i = 0;
+  const rx = /(--[^\n]*|#[^\n]*|\/\*[\s\S]*?(?:\*\/|$))|('(?:[^'\\]|''|\\.)*'?)|("(?:[^"]|"")*"?|`(?:[^`]|``)*`?)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_$#]*)/g;
+  let m;
+  while ((m = rx.exec(t))) {
+    out += esc(t.slice(i, m.index)); i = rx.lastIndex;
+    if (m[1]) { if (m[1][0] === "#" && S.sessao && S.sessao.tipo === "oracle") { out += esc(m[1].slice(0, 1)); rx.lastIndex = i = m.index + 1; continue; } out += `<span class="sx-c">${esc(m[1])}</span>`; }
+    else if (m[2]) out += `<span class="sx-s">${esc(m[2])}</span>`;
+    else if (m[3]) out += `<span class="sx-q">${esc(m[3])}</span>`;
+    else if (m[4]) out += `<span class="sx-n">${m[4]}</span>`;
+    else { const w = m[5].toLowerCase(); out += PALAVRAS.has(w) ? `<span class="sx-k">${esc(m[5])}</span>` : FUNCOES.has(w) && t[rx.lastIndex] === "(" ? `<span class="sx-f">${esc(m[5])}</span>` : esc(m[5]); }
+  }
+  return out + esc(t.slice(i)) + "\n";
+}
+function desenharRealce() {
+  REALCE.innerHTML = realcarSQL(ED.value);
+  const n = ED.value.split("\n").length;
+  CALHA.textContent = Array.from({length: n}, (_, i) => i + 1).join("\n");
+  sincronizar();
+}
+function sincronizar() { REALCE.scrollTop = ED.scrollTop; REALCE.scrollLeft = ED.scrollLeft; CALHA.scrollTop = ED.scrollTop; }
+ED.addEventListener("input", () => { desenharRealce(); localStorage.setItem("wb-sql-rascunho", ED.value); });
+ED.addEventListener("scroll", sincronizar);
+ED.addEventListener("keydown", e => {
+  const {selectionStart: a, selectionEnd: b, value: v} = ED;
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); executarSQL(); return; }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const ini = v.lastIndexOf("\n", a - 1) + 1;
+    if (a === b && !e.shiftKey) { ED.setRangeText("  ", a, b, "end"); }
+    else {
+      const fim = b > a && v[b - 1] === "\n" ? b - 1 : b, bloco = v.slice(ini, fim);
+      const novo = e.shiftKey ? bloco.replace(/^ {1,2}/gm, "") : bloco.replace(/^/gm, "  ");
+      ED.setRangeText(novo, ini, fim, "select");
+    }
+    desenharRealce(); return;
+  }
+  if (e.key === "Enter" && !e.ctrlKey) {
+    const ini = v.lastIndexOf("\n", a - 1) + 1, recuo = (v.slice(ini, a).match(/^[ \t]*/) || [""])[0];
+    if (recuo) { e.preventDefault(); ED.setRangeText("\n" + recuo, a, b, "end"); desenharRealce(); }
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+    e.preventDefault();
+    const ini = v.lastIndexOf("\n", a - 1) + 1, fimL = v.indexOf("\n", b); const fim = fimL < 0 ? v.length : fimL;
+    const bloco = v.slice(ini, fim), todas = bloco.split("\n").every(l => /^\s*--/.test(l) || !l.trim());
+    ED.setRangeText(todas ? bloco.replace(/^(\s*)-- ?/gm, "$1") : bloco.replace(/^/gm, "-- "), ini, fim, "select"); desenharRealce();
+  }
+});
+function consultaAtual() {
+  const {selectionStart: a, selectionEnd: b, value: v} = ED;
+  if (b > a && v.slice(a, b).trim()) return v.slice(a, b);
+  // várias consultas separadas por ';' (fora de textos): pega a que contém o cursor
+  const partes = []; let ini = 0, q = null;
+  for (let i = 0; i < v.length; i++) {
+    const c = v[i];
+    if (q) { if (c === q) q = null; continue; }
+    if (c === "'" || c === '"' || c === "`") q = c;
+    else if (c === "-" && v[i + 1] === "-") { const j = v.indexOf("\n", i); i = j < 0 ? v.length : j; }
+    else if (c === "/" && v[i + 1] === "*") { const j = v.indexOf("*/", i + 2); i = j < 0 ? v.length : j + 1; }
+    else if (c === ";") { partes.push([ini, i]); ini = i + 1; }
+  }
+  partes.push([ini, v.length]);
+  const comTexto = partes.filter(([x, y]) => v.slice(x, y).trim());
+  if (comTexto.length <= 1) return v;
+  const alvo = comTexto.find(([x, y]) => a >= x && a <= y + 1) || comTexto[comTexto.length - 1];
+  return v.slice(alvo[0], alvo[1]);
+}
+$("#sql-limpar").onclick = () => { ED.value = ""; desenharRealce(); localStorage.removeItem("wb-sql-rascunho"); $("#sql-resultado").innerHTML = ""; S.sql.ultimo = null; ED.focus(); };
+$("#sql-executar").onclick = () => executarSQL();
+
+const HIST = () => "wb-hist-" + (S.sessao ? S.sessao.id : "x");
+function lerHist() { try { return JSON.parse(localStorage.getItem(HIST()) || "[]"); } catch (e) { return []; } }
+function guardarHist(sql, ok, info) {
+  const h = lerHist().filter(x => x.sql !== sql);
+  h.unshift({sql, ok, info, quando: new Date().toISOString(), container: S.sessao.container});
+  localStorage.setItem(HIST(), JSON.stringify(h.slice(0, 30)));
+}
+$("#sql-hist-btn").onclick = e => {
+  e.stopPropagation();
+  const box = $("#sql-hist"), h = lerHist();
+  if (!box.classList.contains("oculto")) { box.classList.add("oculto"); return; }
+  box.innerHTML = h.length ? h.map((x, i) => `<button data-h="${i}"><code>${esc(x.sql.replace(/\s+/g, " ").slice(0, 160))}</code><small>${x.ok ? "✓" : "✕"} ${esc(quando(x.quando))} · ${esc(x.container || "")} · ${esc(x.info || "")}</small></button>`).join("")
+    : `<p class="suave" style="padding:12px">Nenhuma consulta executada nesta conexão ainda.</p>`;
+  box.classList.remove("oculto"); $("#sql-hist-btn").setAttribute("aria-expanded", "true");
+  box.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { ED.value = h[+b.dataset.h].sql; desenharRealce(); box.classList.add("oculto"); ED.focus(); });
+};
+document.addEventListener("click", e => { if (!e.target.closest("#sql-hist")) { $("#sql-hist").classList.add("oculto"); $("#sql-hist-btn").setAttribute("aria-expanded", "false"); } });
+
+async function executarSQL(offset = 0, sqlFixo) {
+  const sql = (sqlFixo || consultaAtual()).trim();
+  if (!sql) { toast("Escreva uma consulta SELECT."); return; }
+  const box = $("#sql-resultado"), btn = $("#sql-executar"), lim = S.estado.config.linhas_pagina_sql;
+  btn.disabled = true;
+  const anterior = box.innerHTML;
+  box.innerHTML = `<div class="status-grid" style="padding:6px 0"><i class="gira"></i> Executando${offset ? ` (página ${Math.floor(offset / lim) + 1})` : ""}…</div>` + (offset ? anterior : "");
+  const t0 = performance.now();
+  try {
+    const r = await postJSON("/api/sql/executar", {sql, container: S.sessao.container, offset, limite: lim});
+    S.sql = {ultimo: sql, offset, r, total: offset ? S.sql.total : null};
+    if (!offset) guardarHist(sql, true, `${fmtN(r.linhas.length)}${r.mais ? "+" : ""} linhas · ${fmtN(r.tempo_ms)} ms`);
+    desenharResultadoSQL();
+    marcarStatus("conectado");
+  } catch (e) {
+    if (!offset) guardarHist(sql, false, e.message.slice(0, 60));
+    box.innerHTML = `<div class="status-grid" style="margin-bottom:8px"><span style="color:var(--erro);font-weight:600">✕ Falhou</span> em ${fmtN(Math.round(performance.now() - t0))} ms</div>` + erroHTML(e, e.categoria === "bloqueado" ? "Comando bloqueado (somente leitura)" : "Erro na consulta");
+  } finally { btn.disabled = false; }
+}
+function desenharResultadoSQL() {
+  const {r, offset, total} = S.sql, lim = S.estado.config.linhas_pagina_sql, n = r.linhas.length;
+  const faixa = n ? `${fmtN(offset + 1)}–${fmtN(offset + n)}` : "0";
+  $("#sql-resultado").innerHTML = `
+    <div class="barra-grid">
+      <div class="status-grid"><span class="ok">✓ Sucesso</span> · ${r.mais || offset ? `linhas <b>${faixa}</b>${total != null ? ` de <b>${fmtN(total)}</b>` : r.mais ? " · há mais registros" : ""}` : `<b>${fmtN(n)}</b> ${n === 1 ? "linha retornada" : "linhas retornadas"}`} · ${fmtN(r.tempo_ms)} ms · ${esc(S.sessao.rotulo_container.toLowerCase())} ${esc(r.container || "")}</div>
+      <span class="esp"></span>
+      <input type="search" class="filtro-rapido" id="sql-filtro" placeholder="Filtrar linhas da página" aria-label="Filtrar linhas da página">
+      ${offset || r.mais ? `<button class="btn peq" id="sql-ant" ${offset ? "" : "disabled"}>‹ Anterior</button><button class="btn peq" id="sql-prox" ${r.mais ? "" : "disabled"}>Próxima ›</button>` : ""}
+      ${r.mais && total == null ? `<button class="btn link peq" id="sql-contar" title="Executa COUNT(*) sobre a consulta">Contar total</button>` : ""}
+      <button class="btn prim peq" id="sql-exportar">${ic("baixar", 14)} Exportar resultado</button>
+    </div>
+    <div id="sql-grade"></div>
+    ${r.mais ? `<p class="fraco" style="font-size:12.5px;margin-top:6px">A tela mostra ${fmtN(lim)} linhas por página para continuar leve. A exportação grava o resultado completo.</p>` : ""}`;
+  const G = montarGrade($("#sql-grade"), {...r, offset}, {tiposColuna: r.tipos.map(tipoAmigavel)});
+  $("#sql-filtro").oninput = () => G.filtrar($("#sql-filtro").value);
+  const ant = $("#sql-ant"), prox = $("#sql-prox"), cont = $("#sql-contar");
+  if (ant) ant.onclick = () => executarSQL(Math.max(0, offset - lim), S.sql.ultimo);
+  if (prox) prox.onclick = () => executarSQL(offset + lim, S.sql.ultimo);
+  if (cont) cont.onclick = async () => {
+    cont.innerHTML = `<i class="gira"></i> Contando…`; cont.disabled = true;
+    try { const c = await postJSON("/api/sql/contar", {sql: S.sql.ultimo, container: S.sessao.container}); S.sql.total = c.total; desenharResultadoSQL(); }
+    catch (e) { cont.disabled = false; cont.textContent = "Contar total"; toast(e.message, "erro", 5000); }
+  };
+  $("#sql-exportar").onclick = () => abrirExportacao({origem: "sql", sql: S.sql.ultimo});
+}
+
+ED.value = localStorage.getItem("wb-sql-rascunho") || "";
+carregar().catch(e => { document.body.innerHTML = `<p style="padding:24px">Não foi possível conectar ao SQL Workbench: ${esc(e.message)}</p>`; });
+</script>
+</body>
+</html>
